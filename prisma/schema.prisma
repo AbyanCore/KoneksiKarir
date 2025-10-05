@@ -1,0 +1,158 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  JOB_SEEKER
+  ADMIN_COMPANY
+}
+
+model User {
+  id       String @id @default(uuid())
+  email    String @unique
+  password String
+  role     Role   @default(JOB_SEEKER)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  jobSeekerApplications Application[]     @relation("jobSeekerApplications")
+  JobSeekerProfile      JobSeekerProfile? @relation("JobSeekerProfile")
+}
+
+model JobSeekerProfile {
+  id       Int     @id @default(autoincrement())
+  userId   String  @unique
+  fullName String
+  bio      String?
+
+  // Education
+  lastEducationLevel String? // e.g., "S2", "S1", "SMA", etc.
+  graduationYear     Int?
+  institutionName    String?
+
+  // Professional Profile
+  skills      String[] // e.g., ["JavaScript", "React", "Node.js"] 
+  socialLinks Json[] // e.g., LinkedIn, GitHub, Portfolio example : [{"type": "LinkedIn", "url": "https://linkedin.com/in/username"}]
+
+  // Documents
+  resumeUrl    String? // URL to the uploaded resume/CV
+  portfolioUrl String? // URL to the portfolio website
+
+  // Private Information
+  NIK         String? // National Identification Number
+  phoneNumber String[] // Multiple phone numbers
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(name: "JobSeekerProfile", fields: [userId], references: [id])
+}
+
+model Company {
+  id          Int     @id @default(autoincrement())
+  name        String
+  description String?
+  website     String?
+  location    String?
+  logoUrl     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  jobs                      Job[]
+  EventCompanyParticipation EventCompanyParticipation[]
+}
+
+model Job {
+  id        Int      @id @default(autoincrement())
+  tags      String[]
+  title     String
+  location  String?
+  companyId Int
+
+  // Optional fields
+  description String?
+  salaryMin   Int?
+  salaryMax   Int
+  isRemote    Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company     Company       @relation(fields: [companyId], references: [id])
+  Application Application[]
+}
+
+model Events {
+  id          Int    @id @default(autoincrement())
+  title       String
+  description String
+
+  bannerUrl  String // URL to the event banner image
+  minimapUrl String // URL to the event minimap image
+  date       DateTime
+  location   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  EventCompanyParticipation EventCompanyParticipation[]
+  Application               Application[]
+}
+
+model EventCompanyParticipation {
+  id Int @id @default(autoincrement())
+
+  // Booth or stand number assigned to the company for the event
+  standNumber String
+
+  eventId   Int
+  companyId Int
+
+  event   Events  @relation(fields: [eventId], references: [id])
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@unique([eventId, companyId])
+}
+
+// Max 5 applications per job seeker and Events
+model Application {
+  id          Int    @id @default(autoincrement())
+  jobSeekerId String
+  eventId     Int
+  jobId       Int
+  status      String @default("PENDING") // e.g., PENDING, ACCEPTED, REJECTED
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  event              Events                      @relation(fields: [eventId], references: [id])
+  jobSeeker          User                        @relation(name: "jobSeekerApplications", fields: [jobSeekerId], references: [id])
+  job                Job                         @relation(fields: [jobId], references: [id])
+  ApplicationHistory ApplicationProcessHistory[]
+
+  @@unique([jobSeekerId, eventId, jobId])
+}
+
+model ApplicationProcessHistory {
+  id            Int      @id @default(autoincrement())
+  applicationId Int
+  status        String
+  changedAt     DateTime @default(now())
+
+  application Application @relation(fields: [applicationId], references: [id])
+}
