@@ -26,6 +26,8 @@ model User {
   password String
   role     Role   @default(JOB_SEEKER)
 
+  is_blocked Boolean @default(false)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
