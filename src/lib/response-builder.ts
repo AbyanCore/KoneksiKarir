@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { logger } from "@/common/logger";
+import { logger } from "@/lib/logger";
 
 export default class ResponseBuilder {
   static wrap<T>(data: T, status = 200): Response {

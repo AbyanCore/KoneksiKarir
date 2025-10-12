@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Card,
   CardContent,
@@ -11,22 +12,49 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { LogIn } from "lucide-react";
+import { SignInDto } from "@/lib/dtos/auth/signin.dto";
+import { trpc } from "@/components/trpc/trpc-client";
+import { toast } from "sonner";
 
 export default function Page_AuthSignin() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const signIn = trpc.auth.signIn.useMutation();
 
-  const handleSignIn = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Add your sign in logic here
-    console.log("Sign in:", { email, password });
+  const form = useForm<SignInDto>({
+    resolver: zodResolver(SignInDto),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
+
+  const handleSignIn = (data: SignInDto) => {
+    signIn.mutate(data, {
+      onSuccess: (data) => {
+        toast.success("Signed in successfully. Redirecting...");
+        if (data.role === "ADMIN") {
+          router.push("/s/admin/dashboard");
+        } else {
+          router.push("/s/hub");
+        }
+      },
+      onError: (error) => {
+        toast.error(error.message || "Sign in failed. Please try again.");
+        console.error("Sign in error:", error);
+      },
+    });
   };
 
   const handleSignUp = () => {
-    // Navigate to sign up page or add sign up logic
     router.push("/auth/signup");
   };
 
@@ -47,48 +75,66 @@ export default function Page_AuthSignin() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSignIn} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="name@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="border-slate-200 focus:border-blue-400 focus:ring-blue-400"
+          <Form {...form}>
+            <form
+              onSubmit={form.handleSubmit(handleSignIn)}
+              className="space-y-4"
+            >
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="email"
+                        placeholder="name@example.com"
+                        {...field}
+                        className="border-slate-200 focus:border-blue-400 focus:ring-blue-400"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="border-slate-200 focus:border-blue-400 focus:ring-blue-400"
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="password"
+                        placeholder="Enter your password"
+                        {...field}
+                        className="border-slate-200 focus:border-blue-400 focus:ring-blue-400"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="space-y-2 pt-2">
-              <Button
-                type="submit"
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-              >
-                Sign In
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full border-purple-200 hover:bg-purple-50 hover:border-purple-300"
-                onClick={handleSignUp}
-              >
-                Sign Up
-              </Button>
-            </div>
-          </form>
+              <div className="space-y-2 pt-2">
+                <Button
+                  type="submit"
+                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                  disabled={form.formState.isSubmitting}
+                >
+                  {form.formState.isSubmitting ? "Signing In..." : "Sign In"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full border-purple-200 hover:bg-purple-50 hover:border-purple-300"
+                  onClick={handleSignUp}
+                >
+                  Sign Up
+                </Button>
+              </div>
+            </form>
+          </Form>
         </CardContent>
       </Card>
     </div>

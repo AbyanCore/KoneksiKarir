@@ -30,7 +30,7 @@ import { Building2 } from "lucide-react";
 import {
   CreateCompanyAccountDto as CreateCompanyAccountSchema,
   CreateCompanyAccountDto as CreateCompanyAccountDtoType,
-} from "@/common/dtos/company.create-account.dto";
+} from "@/lib/dtos/users/create.company-account.dto";
 
 export default function Page_CompanySignup() {
   const router = useRouter();

@@ -118,7 +118,6 @@ model Events {
   updatedAt DateTime @updatedAt
 
   EventCompanyParticipation EventCompanyParticipation[]
-  Application               Application[]
   Job                       Job[]
 }
 
@@ -141,19 +140,17 @@ model EventCompanyParticipation {
 model Application {
   id          Int    @id @default(autoincrement())
   jobSeekerId String
-  eventId     Int
   jobId       Int
   status      String @default("PENDING") // e.g., PENDING, ACCEPTED, REJECTED
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  event              Events                      @relation(fields: [eventId], references: [id])
   jobSeeker          User                        @relation(name: "jobSeekerApplications", fields: [jobSeekerId], references: [id])
   job                Job                         @relation(fields: [jobId], references: [id])
   ApplicationHistory ApplicationProcessHistory[]
 
-  @@unique([jobSeekerId, eventId, jobId])
+  @@unique([jobSeekerId, jobId])
 }
 
 model ApplicationProcessHistory {

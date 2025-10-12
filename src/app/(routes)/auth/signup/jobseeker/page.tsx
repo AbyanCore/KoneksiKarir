@@ -21,10 +21,14 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { UserCircle } from "lucide-react";
-import { CreateJobSeekerAccountDto } from "@/common/dtos/jobseeker.create-account.dto";
+import { CreateJobSeekerAccountDto } from "@/lib/dtos/users/create.jobseeker-account.dto";
+import { trpc } from "@/components/trpc/trpc-client";
+import { toast } from "sonner";
 
 export default function Page_JobSeekerSignup() {
   const router = useRouter();
+
+  const addAccount = trpc.users.createJobSeekerAccount.useMutation();
 
   const form = useForm<CreateJobSeekerAccountDto>({
     resolver: zodResolver(CreateJobSeekerAccountDto),
@@ -36,18 +40,18 @@ export default function Page_JobSeekerSignup() {
   });
 
   const onSubmit = async (data: CreateJobSeekerAccountDto) => {
-    try {
-      console.log("Form data:", data);
-      // Add your API call here
-      // await fetch('/api/auth/signup/jobseeker', {
-      //   method: 'POST',
-      //   body: JSON.stringify({ ...data, role: 'JOB_SEEKER' })
-      // });
-
-      router.push("/auth/signin");
-    } catch (error) {
-      console.error("Signup error:", error);
-    }
+    addAccount.mutateAsync(data, {
+      onSuccess: () => {
+        toast.success("Account created successfully! Please sign in.");
+        router.push("/auth/signin");
+        form.reset();
+      },
+      onError: (error) => {
+        toast.error(
+          error.message || "An error occurred during signup. Please try again."
+        );
+      },
+    });
   };
 
   return (

@@ -1,5 +1,5 @@
 import { logger } from "./logger";
-import ResponseBuilder from "@/common/response-builder";
+import ResponseBuilder from "@/lib/response-builder";
 
 type ParamsType = Record<string, string> | undefined;
 
