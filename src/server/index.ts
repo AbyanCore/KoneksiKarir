@@ -5,6 +5,7 @@ import { eventsRouter } from "./routers/events";
 import { jobsRouter } from "./routers/jobs";
 import { usersRouter } from "./routers/users";
 import { dashboardRouter } from "./routers/dashboard";
+import { profileRouter } from "./routers/profile";
 import { router } from "./trpc";
 
 export const appRouter = router({
@@ -16,6 +17,7 @@ export const appRouter = router({
   events: eventsRouter,
   applications: applicationsRouter,
   dashboard: dashboardRouter,
+  profile: profileRouter,
 });
 
 export type AppRouter = typeof appRouter;
