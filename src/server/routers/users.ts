@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import { publicProcedure, router } from "../trpc";
 import z from "zod";
+import bcrypt from "bcrypt";
 import { CreateJobSeekerAccountDto } from "@/lib/dtos/users/create.jobseeker-account.dto";
 import { CreateCompanyAccountDto } from "@/lib/dtos/users/create.company-account.dto";
 import { Role } from "@/generated/prisma";
@@ -70,10 +71,13 @@ export const usersRouter = router({
   createJobSeekerAccount: publicProcedure
     .input(CreateJobSeekerAccountDto)
     .mutation(async (opts) => {
+      // Hash password before storing
+      const hashedPassword = await bcrypt.hash(opts.input.password, 10);
+
       const newUser = await prisma.user.create({
         data: {
           email: opts.input.email,
-          password: opts.input.password,
+          password: hashedPassword,
           role: Role.JOB_SEEKER,
         },
       });
@@ -92,11 +96,14 @@ export const usersRouter = router({
       //     throw new Error("Invalid company code");
       //   }
 
+      // Hash password before storing
+      const hashedPassword = await bcrypt.hash(opts.input.password, 10);
+
       // assume code is valid for now
       const newUser = await prisma.user.create({
         data: {
           email: opts.input.email,
-          password: opts.input.password,
+          password: hashedPassword,
           role: Role.ADMIN_COMPANY,
         },
       });

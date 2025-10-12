@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import NavBar from "@/components/navbar";
 import TRPCProvider from "@/components/trpc/trpc-provider";
+import { AuthProvider } from "@/components/auth/auth-provider";
 import { Toaster } from "sonner";
 
 const geistSans = Geist({
@@ -30,9 +31,11 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <NavBar />
-        <TRPCProvider>{children}</TRPCProvider>
-        <Toaster />
+        <AuthProvider>
+          <NavBar />
+          <TRPCProvider>{children}</TRPCProvider>
+          <Toaster />
+        </AuthProvider>
       </body>
     </html>
   );

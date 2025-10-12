@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { trpc } from "@/components/trpc/trpc-client";
+import { useAuth } from "@/components/auth/auth-provider";
 import { toast } from "sonner";
 import HubHeader from "./HubHeader";
 import EventMinimap from "./EventMinimap";
@@ -10,12 +11,9 @@ import CompaniesHeader from "./CompaniesHeader";
 import CompanyList from "./CompanyList";
 import JobDetailSheet from "./JobDetailSheet";
 
-// TODO: Replace with actual user ID from auth context
-const MOCK_USER_ID = "mock-user-id";
-const MOCK_USER_ROLE = "JOB_SEEKER"; // TODO: Replace with actual user role from auth context
-
 export default function HubPage() {
   const router = useRouter();
+  const { user, isLoading: isAuthLoading, isAuthenticated } = useAuth();
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
   const [expandedCompanyId, setExpandedCompanyId] = useState<number | null>(
     null
@@ -24,20 +22,25 @@ export default function HubPage() {
   const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
   const [isJobDetailOpen, setIsJobDetailOpen] = useState(false);
 
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!isAuthLoading && !isAuthenticated) {
+      toast.error("Please sign in to access the hub");
+      router.push("/auth/signin");
+    }
+  }, [isAuthLoading, isAuthenticated, router]);
+
   // Check profile completion for job seekers
   const { data: profileStatus, isLoading: isCheckingProfile } =
-    trpc.profile.checkProfileComplete.useQuery(
-      { userId: MOCK_USER_ID },
-      {
-        enabled: MOCK_USER_ROLE === "JOB_SEEKER",
-        retry: false,
-      }
-    );
+    trpc.profile.checkMyProfileComplete.useQuery(undefined, {
+      enabled: isAuthenticated && user?.role === "JOB_SEEKER",
+      retry: false,
+    });
 
   // Redirect to profile if incomplete
   useEffect(() => {
     if (
-      MOCK_USER_ROLE === "JOB_SEEKER" &&
+      user?.role === "JOB_SEEKER" &&
       profileStatus &&
       !profileStatus.isComplete
     ) {
@@ -46,7 +49,7 @@ export default function HubPage() {
       });
       router.push("/s/profile");
     }
-  }, [profileStatus, router]);
+  }, [profileStatus, user, router]);
 
   // Fetch all events
   const { data: events = [], isLoading: isLoadingEvents } =
@@ -68,11 +71,14 @@ export default function HubPage() {
       { enabled: !!selectedEventId }
     );
 
-  // Fetch application count for current event
+  // Fetch application count for current event (only for job seekers)
   const { data: applicationCount } =
-    trpc.applications.countByUserAndEvent.useQuery(
-      { userId: MOCK_USER_ID, eventId: selectedEventId! },
-      { enabled: !!selectedEventId }
+    trpc.applications.countMyApplicationsByEvent.useQuery(
+      { eventId: selectedEventId! },
+      {
+        enabled:
+          !!selectedEventId && isAuthenticated && user?.role === "JOB_SEEKER",
+      }
     );
 
   // Fetch selected job details
@@ -82,11 +88,15 @@ export default function HubPage() {
       { enabled: !!selectedJobId }
     );
 
-  // Check if user has applied to selected job
-  const { data: applicationStatus } = trpc.applications.checkApplied.useQuery(
-    { userId: MOCK_USER_ID, jobId: selectedJobId! },
-    { enabled: !!selectedJobId }
-  );
+  // Check if user has applied to selected job (only for job seekers)
+  const { data: applicationStatus } =
+    trpc.applications.checkMyApplication.useQuery(
+      { jobId: selectedJobId! },
+      {
+        enabled:
+          !!selectedJobId && isAuthenticated && user?.role === "JOB_SEEKER",
+      }
+    );
 
   // Create application mutation
   const createApplication = trpc.applications.create.useMutation({
@@ -94,8 +104,8 @@ export default function HubPage() {
       toast.success("Application submitted successfully!");
       setIsJobDetailOpen(false);
       // Invalidate queries to refresh data
-      trpc.useContext().applications.countByUserAndEvent.invalidate();
-      trpc.useContext().applications.checkApplied.invalidate();
+      trpc.useContext().applications.countMyApplicationsByEvent.invalidate();
+      trpc.useContext().applications.checkMyApplication.invalidate();
       trpc.useContext().jobs.findByEventGroupedByCompany.invalidate();
     },
     onError: (error) => {
@@ -176,14 +186,14 @@ export default function HubPage() {
 
     createApplication.mutate({
       jobId: selectedJobId,
-      jobSeekerId: MOCK_USER_ID,
     });
   };
 
-  // Loading state (including profile check for job seekers)
+  // Loading state (including auth and profile check for job seekers)
   if (
+    isAuthLoading ||
     isLoadingEvents ||
-    (MOCK_USER_ROLE === "JOB_SEEKER" && isCheckingProfile)
+    (user?.role === "JOB_SEEKER" && isCheckingProfile)
   ) {
     return (
       <div className="p-6">
@@ -196,9 +206,14 @@ export default function HubPage() {
     );
   }
 
+  // Prevent rendering if not authenticated
+  if (!isAuthenticated) {
+    return null; // Will redirect via useEffect
+  }
+
   // Prevent rendering if profile is incomplete (job seekers only)
   if (
-    MOCK_USER_ROLE === "JOB_SEEKER" &&
+    user?.role === "JOB_SEEKER" &&
     profileStatus &&
     !profileStatus.isComplete
   ) {

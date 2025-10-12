@@ -22,12 +22,12 @@ import {
 } from "@/components/ui/form";
 import { LogIn } from "lucide-react";
 import { SignInDto } from "@/lib/dtos/auth/signin.dto";
-import { trpc } from "@/components/trpc/trpc-client";
+import { useAuth } from "@/components/auth/auth-provider";
 import { toast } from "sonner";
 
 export default function Page_AuthSignin() {
   const router = useRouter();
-  const signIn = trpc.auth.signIn.useMutation();
+  const { signIn } = useAuth();
 
   const form = useForm<SignInDto>({
     resolver: zodResolver(SignInDto),
@@ -37,21 +37,15 @@ export default function Page_AuthSignin() {
     },
   });
 
-  const handleSignIn = (data: SignInDto) => {
-    signIn.mutate(data, {
-      onSuccess: (data) => {
-        toast.success("Signed in successfully. Redirecting...");
-        if (data.role === "ADMIN") {
-          router.push("/s/admin/dashboard");
-        } else {
-          router.push("/s/hub");
-        }
-      },
-      onError: (error) => {
-        toast.error(error.message || "Sign in failed. Please try again.");
-        console.error("Sign in error:", error);
-      },
-    });
+  const handleSignIn = async (data: SignInDto) => {
+    try {
+      await signIn(data.email, data.password);
+      // Redirect is handled by AuthProvider based on role
+      // ADMIN → /s/admin, JOB_SEEKER → /s/profile
+    } catch (error) {
+      // Error toast is already shown by AuthProvider
+      console.error("Sign in error:", error);
+    }
   };
 
   const handleSignUp = () => {

@@ -16,6 +16,13 @@ export default function TRPCProvider({
       links: [
         httpBatchLink({
           url: "/api/trpc",
+          // Ensure cookies are sent with requests
+          fetch(url, options) {
+            return fetch(url, {
+              ...options,
+              credentials: "include",
+            });
+          },
         }),
       ],
     })

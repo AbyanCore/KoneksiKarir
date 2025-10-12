@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { trpc } from "@/components/trpc/trpc-client";
+import { useAuth } from "@/components/auth/auth-provider";
 import { toast } from "sonner";
 import { Form } from "@/components/ui/form";
 import BasicInformationCard from "./BasicInformationCard";
@@ -15,9 +16,6 @@ import SocialLinksCard from "./SocialLinksCard";
 import DocumentsCard from "./DocumentsCard";
 import PrivateInformationCard from "./PrivateInformationCard";
 import ProfileActions from "./ProfileActions";
-
-// TODO: Replace with actual user ID from auth context
-const MOCK_USER_ID = "mock-user-id";
 
 // Profile form schema
 const profileFormSchema = z.object({
@@ -49,29 +47,38 @@ interface SocialLink {
 
 export default function ProfilePage() {
   const router = useRouter();
+  const { user, isLoading: isAuthLoading, isAuthenticated } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [skills, setSkills] = useState<string[]>([]);
   const [newSkill, setNewSkill] = useState("");
   const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
   const [phoneNumbers, setPhoneNumbers] = useState<string[]>([]);
 
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!isAuthLoading && !isAuthenticated) {
+      toast.error("Please sign in to access your profile");
+      router.push("/auth/signin");
+    }
+  }, [isAuthLoading, isAuthenticated, router]);
+
   // Fetch user profile
-  const { data: userData, isLoading } =
-    trpc.profile.getJobSeekerProfile.useQuery(
-      { userId: MOCK_USER_ID },
-      {
-        retry: false,
-        refetchOnWindowFocus: false,
-      }
-    );
+  const { data: userData, isLoading } = trpc.profile.getMyProfile.useQuery(
+    undefined,
+    {
+      enabled: isAuthenticated,
+      retry: false,
+      refetchOnWindowFocus: false,
+    }
+  );
 
   // Update profile mutation
-  const updateProfile = trpc.profile.updateJobSeekerProfile.useMutation({
+  const updateProfile = trpc.profile.updateMyProfile.useMutation({
     onSuccess: () => {
       toast.success("Profile updated successfully!");
       setIsEditing(false);
       // Invalidate and refetch
-      trpc.useContext().profile.getJobSeekerProfile.invalidate();
+      trpc.useContext().profile.getMyProfile.invalidate();
     },
     onError: (error) => {
       toast.error(error.message || "Failed to update profile");
@@ -135,7 +142,6 @@ export default function ProfilePage() {
   const onSubmit = async (data: ProfileFormValues) => {
     try {
       const profileData = {
-        userId: MOCK_USER_ID,
         fullName: data.fullName,
         bio: data.bio,
         lastEducationLevel: data.lastEducationLevel,
@@ -227,7 +233,7 @@ export default function ProfilePage() {
   };
 
   // Loading state
-  if (isLoading) {
+  if (isAuthLoading || isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
         <div className="max-w-4xl mx-auto px-4 py-8">
@@ -239,6 +245,11 @@ export default function ProfilePage() {
         </div>
       </div>
     );
+  }
+
+  // Not authenticated
+  if (!isAuthenticated) {
+    return null; // Will redirect via useEffect
   }
 
   return (
