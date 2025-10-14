@@ -31,8 +31,9 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  jobSeekerApplications Application[]     @relation("jobSeekerApplications")
-  JobSeekerProfile      JobSeekerProfile? @relation("JobSeekerProfile")
+  jobSeekerApplications Application[]        @relation("jobSeekerApplications")
+  JobSeekerProfile      JobSeekerProfile?    @relation("JobSeekerProfile")
+  AdminCompanyProfile   AdminCompanyProfile? @relation("AdminCompanyProfile")
 }
 
 model JobSeekerProfile {
@@ -64,6 +65,18 @@ model JobSeekerProfile {
   user User @relation(name: "JobSeekerProfile", fields: [userId], references: [id])
 }
 
+model AdminCompanyProfile {
+  id        Int    @id @default(autoincrement())
+  userId    String @unique
+  companyId Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User    @relation(name: "AdminCompanyProfile", fields: [userId], references: [id])
+  company Company @relation(fields: [companyId], references: [id])
+}
+
 model Company {
   id          Int     @id @default(autoincrement())
   name        String
@@ -79,6 +92,7 @@ model Company {
 
   jobs                      Job[]
   EventCompanyParticipation EventCompanyParticipation[]
+  AdminCompanyProfile       AdminCompanyProfile[]
 }
 
 model Job {

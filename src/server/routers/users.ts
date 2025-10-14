@@ -87,24 +87,47 @@ export const usersRouter = router({
   createCompanyAccount: publicProcedure
     .input(CreateCompanyAccountDto)
     .mutation(async (opts) => {
-      // check codes in companies
-      //   const company = await prisma.company.findUnique({
-      //     where: { code: opts.input.code },
-      //   });
+      // Check if company code is valid
+      const company = await prisma.company.findUnique({
+        where: { code: opts.input.code },
+      });
 
-      //   if (!company) {
-      //     throw new Error("Invalid company code");
-      //   }
+      if (!company) {
+        throw new Error(
+          "Invalid company code. Please contact your administrator for a valid code."
+        );
+      }
+
+      // Check if email already exists
+      const existingUser = await prisma.user.findUnique({
+        where: { email: opts.input.email },
+      });
+
+      if (existingUser) {
+        throw new Error("An account with this email already exists.");
+      }
 
       // Hash password before storing
       const hashedPassword = await bcrypt.hash(opts.input.password, 10);
 
-      // assume code is valid for now
+      // Create user with ADMIN_COMPANY role and link to company
       const newUser = await prisma.user.create({
         data: {
           email: opts.input.email,
           password: hashedPassword,
           role: Role.ADMIN_COMPANY,
+          AdminCompanyProfile: {
+            create: {
+              companyId: company.id,
+            },
+          },
+        },
+        include: {
+          AdminCompanyProfile: {
+            include: {
+              company: true,
+            },
+          },
         },
       });
       return newUser;

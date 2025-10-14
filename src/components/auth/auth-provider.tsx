@@ -153,7 +153,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Redirect based on role
       const redirectPath =
         data.user.role === "ADMIN"
-          ? "/s/admin"
+          ? "/s/admin/dashboard"
+          : data.user.role === "ADMIN_COMPANY"
+          ? "/s/company/dashboard"
           : data.user.role === "JOB_SEEKER"
           ? "/s/profile"
           : "/s/hub";

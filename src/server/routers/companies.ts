@@ -1,5 +1,5 @@
 import prisma from "@/lib/prisma";
-import { publicProcedure, router } from "../trpc";
+import { publicProcedure, router, companyProcedure } from "../trpc";
 import z from "zod";
 import { CreateCompanyDto } from "@/lib/dtos/companies/create.company.dto";
 import { UpdateCompanyDto } from "@/lib/dtos/companies/update.company.dto";
@@ -220,5 +220,294 @@ export const companiesRouter = router({
         },
       });
       return updatedCompany;
+    }),
+
+  // ==================== COMPANY-SPECIFIC PROCEDURES ====================
+
+  // Get company profile by user email (company admin)
+  getMyCompanyProfile: companyProcedure.query(async ({ ctx }) => {
+    // Get company through AdminCompanyProfile relation
+    const adminProfile = await prisma.adminCompanyProfile.findUnique({
+      where: { userId: ctx.user.userId },
+      include: {
+        company: {
+          include: {
+            _count: {
+              select: {
+                EventCompanyParticipation: true,
+                jobs: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!adminProfile) {
+      return null;
+    }
+
+    return adminProfile.company;
+  }),
+
+  // Check if company profile is complete
+  checkMyCompanyProfileComplete: companyProcedure.query(async ({ ctx }) => {
+    // Get company through AdminCompanyProfile relation
+    const adminProfile = await prisma.adminCompanyProfile.findUnique({
+      where: { userId: ctx.user.userId },
+      include: {
+        company: true,
+      },
+    });
+
+    if (!adminProfile) {
+      return {
+        isComplete: false,
+        message: "Company profile not linked. Please contact administrator.",
+      };
+    }
+
+    const company = adminProfile.company;
+
+    // Check if company has required fields
+    const isComplete = !!(
+      company.name &&
+      company.description &&
+      company.location
+    );
+
+    return {
+      isComplete,
+      message: isComplete
+        ? "Company profile is complete"
+        : "Please complete your company profile",
+      company,
+    };
+  }),
+
+  // Get company dashboard data (jobs, events, applications)
+  getMyCompanyDashboard: companyProcedure.query(async ({ ctx }) => {
+    // Get company through AdminCompanyProfile relation
+    const adminProfile = await prisma.adminCompanyProfile.findUnique({
+      where: { userId: ctx.user.userId },
+      include: {
+        company: true,
+      },
+    });
+
+    if (!adminProfile) {
+      return null;
+    }
+
+    const company = adminProfile.company;
+
+    // Get all participating events with jobs and applications
+    const events = await prisma.eventCompanyParticipation.findMany({
+      where: {
+        companyId: company.id,
+      },
+      include: {
+        event: {
+          include: {
+            _count: {
+              select: {
+                Job: true,
+                EventCompanyParticipation: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // Get all jobs with application counts
+    const jobs = await prisma.job.findMany({
+      where: {
+        companyId: company.id,
+      },
+      include: {
+        event: {
+          select: {
+            id: true,
+            title: true,
+            date: true,
+          },
+        },
+        _count: {
+          select: {
+            Application: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    // Get total application count
+    const totalApplications = await prisma.application.count({
+      where: {
+        job: {
+          companyId: company.id,
+        },
+      },
+    });
+
+    // Get application counts by status
+    const pendingCount = await prisma.application.count({
+      where: {
+        job: {
+          companyId: company.id,
+        },
+        status: "PENDING",
+      },
+    });
+
+    const acceptedCount = await prisma.application.count({
+      where: {
+        job: {
+          companyId: company.id,
+        },
+        status: "ACCEPTED",
+      },
+    });
+
+    const rejectedCount = await prisma.application.count({
+      where: {
+        job: {
+          companyId: company.id,
+        },
+        status: "REJECTED",
+      },
+    });
+
+    return {
+      company,
+      events: events.map((e) => ({
+        ...e.event,
+        standNumber: e.standNumber,
+        participation: e,
+      })),
+      jobs,
+      totalApplications,
+      stats: {
+        totalJobs: jobs.length,
+        totalEvents: events.length,
+        totalApplications,
+        pending: pendingCount,
+        accepted: acceptedCount,
+        rejected: rejectedCount,
+      },
+    };
+  }),
+
+  // Get applications for a specific job
+  getJobApplications: companyProcedure
+    .input(
+      z.object({
+        jobId: z.number(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      // Get company through AdminCompanyProfile relation
+      const adminProfile = await prisma.adminCompanyProfile.findUnique({
+        where: { userId: ctx.user.userId },
+        include: {
+          company: true,
+        },
+      });
+
+      if (!adminProfile) {
+        throw new Error("Company profile not found");
+      }
+
+      // Verify job belongs to company
+      const job = await prisma.job.findFirst({
+        where: {
+          id: input.jobId,
+          companyId: adminProfile.companyId,
+        },
+        include: {
+          company: true,
+          event: true,
+          Application: {
+            include: {
+              jobSeeker: {
+                select: {
+                  id: true,
+                  email: true,
+                  JobSeekerProfile: true,
+                },
+              },
+              ApplicationHistory: {
+                orderBy: {
+                  changedAt: "desc",
+                },
+              },
+            },
+            orderBy: {
+              createdAt: "desc",
+            },
+          },
+        },
+      });
+
+      if (!job) {
+        throw new Error("Job not found or unauthorized");
+      }
+
+      return job;
+    }),
+
+  // Update application status
+  updateApplicationStatus: companyProcedure
+    .input(
+      z.object({
+        applicationId: z.number(),
+        status: z.enum(["PENDING", "ACCEPTED", "REJECTED", "REVIEWED"]),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Get company through AdminCompanyProfile relation
+      const adminProfile = await prisma.adminCompanyProfile.findUnique({
+        where: { userId: ctx.user.userId },
+        include: {
+          company: true,
+        },
+      });
+
+      if (!adminProfile) {
+        throw new Error("Company profile not found");
+      }
+
+      // Verify application belongs to company's job
+      const application = await prisma.application.findFirst({
+        where: {
+          id: input.applicationId,
+          job: {
+            companyId: adminProfile.companyId,
+          },
+        },
+      });
+
+      if (!application) {
+        throw new Error("Application not found or unauthorized");
+      }
+
+      // Update application status
+      const updated = await prisma.application.update({
+        where: { id: input.applicationId },
+        data: { status: input.status },
+      });
+
+      // Create history record
+      await prisma.applicationProcessHistory.create({
+        data: {
+          applicationId: input.applicationId,
+          status: input.status,
+        },
+      });
+
+      return updated;
     }),
 });

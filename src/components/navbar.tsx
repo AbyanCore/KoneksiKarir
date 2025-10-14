@@ -11,32 +11,67 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, Activity, LogOut, Briefcase } from "lucide-react";
+import {
+  User,
+  Activity,
+  LogOut,
+  Briefcase,
+  Building2,
+  LayoutDashboard,
+} from "lucide-react";
+import { useAuth } from "@/components/auth/auth-provider";
 
 export default function NavBar() {
   const router = useRouter();
+  const { user, signOut } = useAuth();
 
-  // Mock user data - replace with actual user data from context/session
-  const user = {
-    name: "John Doe",
-    email: "john@example.com",
-    avatar: "",
+  const handleLogout = async () => {
+    await signOut();
   };
 
-  const handleLogout = () => {
-    // Add your logout logic here
-    console.log("Logging out...");
-    router.push("/auth/signin");
+  const getInitials = (email: string) => {
+    return email.split("@")[0].substring(0, 2).toUpperCase();
   };
 
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
+  // Don't render if user is not authenticated
+  if (!user) {
+    return null;
+  }
+
+  // Determine navigation items based on role
+  const getNavigationItems = () => {
+    if (user.role === "JOB_SEEKER") {
+      return [
+        {
+          icon: User,
+          label: "Profile",
+          onClick: () => router.push("/s/profile"),
+        },
+        {
+          icon: Activity,
+          label: "Activity",
+          onClick: () => router.push("/s/activity"),
+        },
+      ];
+    } else if (user.role === "ADMIN_COMPANY") {
+      return [
+        {
+          icon: Building2,
+          label: "Company Profile",
+          onClick: () => router.push("/s/company/profile"),
+        },
+        {
+          icon: LayoutDashboard,
+          label: "Company Dashboard",
+          onClick: () => router.push("/s/company/dashboard"),
+        },
+      ];
+    }
+    // For ADMIN and other roles, no specific nav items
+    return [];
   };
+
+  const navigationItems = getNavigationItems();
 
   return (
     <nav className="bg-white/50 backdrop-blur-sm border-b border-slate-200 sticky top-0 z-50 shadow-sm">
@@ -45,7 +80,7 @@ export default function NavBar() {
           {/* Logo */}
           <div
             className="flex items-center gap-2 cursor-pointer"
-            onClick={() => router.push("/hub")}
+            onClick={() => router.push("/s/hub")}
           >
             <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-2 rounded-lg">
               <Briefcase className="h-6 w-6 text-white" />
@@ -63,9 +98,8 @@ export default function NavBar() {
                 className="relative h-10 w-10 rounded-full"
               >
                 <Avatar className="h-10 w-10 border-2 border-purple-200">
-                  <AvatarImage src={user.avatar} alt={user.name} />
                   <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-500 text-white">
-                    {getInitials(user.name)}
+                    {getInitials(user.email)}
                   </AvatarFallback>
                 </Avatar>
               </Button>
@@ -74,7 +108,7 @@ export default function NavBar() {
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium leading-none">
-                    {user.name}
+                    {user.email.split("@")[0]}
                   </p>
                   <p className="text-xs leading-none text-muted-foreground">
                     {user.email}
@@ -82,21 +116,20 @@ export default function NavBar() {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="cursor-pointer"
-                onClick={() => router.push("/profile")}
-              >
-                <User className="mr-2 h-4 w-4" />
-                <span>Profile</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="cursor-pointer"
-                onClick={() => router.push("/activity")}
-              >
-                <Activity className="mr-2 h-4 w-4" />
-                <span>Activity</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
+              {navigationItems.map((item, index) => {
+                const Icon = item.icon;
+                return (
+                  <DropdownMenuItem
+                    key={index}
+                    className="cursor-pointer"
+                    onClick={item.onClick}
+                  >
+                    <Icon className="mr-2 h-4 w-4" />
+                    <span>{item.label}</span>
+                  </DropdownMenuItem>
+                );
+              })}
+              {navigationItems.length > 0 && <DropdownMenuSeparator />}
               <DropdownMenuItem
                 className="cursor-pointer text-red-600 focus:text-red-600"
                 onClick={handleLogout}

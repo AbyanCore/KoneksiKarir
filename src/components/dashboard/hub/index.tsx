@@ -37,7 +37,14 @@ export default function HubPage() {
       retry: false,
     });
 
-  // Redirect to profile if incomplete
+  // Check company profile completion for company admins
+  const { data: companyProfileStatus, isLoading: isCheckingCompanyProfile } =
+    trpc.companies.checkMyCompanyProfileComplete.useQuery(undefined, {
+      enabled: isAuthenticated && user?.role === "ADMIN_COMPANY",
+      retry: false,
+    });
+
+  // Redirect to profile if incomplete (job seekers)
   useEffect(() => {
     if (
       user?.role === "JOB_SEEKER" &&
@@ -50,6 +57,20 @@ export default function HubPage() {
       router.push("/s/profile");
     }
   }, [profileStatus, user, router]);
+
+  // Redirect to company profile if incomplete (company admins)
+  useEffect(() => {
+    if (
+      user?.role === "ADMIN_COMPANY" &&
+      companyProfileStatus &&
+      !companyProfileStatus.isComplete
+    ) {
+      toast.info("Please complete your company profile first", {
+        duration: 5000,
+      });
+      router.push("/s/company/profile");
+    }
+  }, [companyProfileStatus, user, router]);
 
   // Fetch all events
   const { data: events = [], isLoading: isLoadingEvents } =
@@ -189,11 +210,12 @@ export default function HubPage() {
     });
   };
 
-  // Loading state (including auth and profile check for job seekers)
+  // Loading state (including auth and profile check)
   if (
     isAuthLoading ||
     isLoadingEvents ||
-    (user?.role === "JOB_SEEKER" && isCheckingProfile)
+    (user?.role === "JOB_SEEKER" && isCheckingProfile) ||
+    (user?.role === "ADMIN_COMPANY" && isCheckingCompanyProfile)
   ) {
     return (
       <div className="p-6">
@@ -211,13 +233,22 @@ export default function HubPage() {
     return null; // Will redirect via useEffect
   }
 
-  // Prevent rendering if profile is incomplete (job seekers only)
+  // Prevent rendering if profile is incomplete (job seekers)
   if (
     user?.role === "JOB_SEEKER" &&
     profileStatus &&
     !profileStatus.isComplete
   ) {
     return null; // Will redirect to profile page via useEffect
+  }
+
+  // Prevent rendering if company profile is incomplete (company admins)
+  if (
+    user?.role === "ADMIN_COMPANY" &&
+    companyProfileStatus &&
+    !companyProfileStatus.isComplete
+  ) {
+    return null; // Will redirect to company profile page via useEffect
   }
 
   // No events state

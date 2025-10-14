@@ -68,8 +68,30 @@ const isAdmin = t.middleware(({ ctx, next }) => {
   });
 });
 
+// Middleware to check if user is company admin
+const isCompany = t.middleware(({ ctx, next }) => {
+  if (!ctx.user) {
+    throw new TRPCError({
+      code: "UNAUTHORIZED",
+      message: "You must be logged in to access this resource",
+    });
+  }
+  if (ctx.user.role !== "ADMIN_COMPANY") {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "This resource is only accessible to company administrators",
+    });
+  }
+  return next({
+    ctx: {
+      user: ctx.user,
+    },
+  });
+});
+
 export const router = t.router;
 export const publicProcedure = t.procedure;
 export const protectedProcedure = t.procedure.use(isAuthenticated);
 export const jobSeekerProcedure = t.procedure.use(isJobSeeker);
 export const adminProcedure = t.procedure.use(isAdmin);
+export const companyProcedure = t.procedure.use(isCompany);

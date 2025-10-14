@@ -31,6 +31,8 @@ import {
   CreateCompanyAccountDto as CreateCompanyAccountSchema,
   CreateCompanyAccountDto as CreateCompanyAccountDtoType,
 } from "@/lib/dtos/users/create.company-account.dto";
+import { trpc } from "@/components/trpc/trpc-client";
+import { toast } from "sonner";
 
 export default function Page_CompanySignup() {
   const router = useRouter();
@@ -45,19 +47,19 @@ export default function Page_CompanySignup() {
     },
   });
 
-  const onSubmit = async (data: CreateCompanyAccountDtoType) => {
-    try {
-      console.log("Form data:", data);
-      // Add your API call here
-      // await fetch('/api/auth/signup/company', {
-      //   method: 'POST',
-      //   body: JSON.stringify({ ...data, role: 'ADMIN_COMPANY' })
-      // });
+  const createCompanyAccountMutation =
+    trpc.users.createCompanyAccount.useMutation({
+      onSuccess: () => {
+        toast.success("Company account created successfully! Please sign in.");
+        router.push("/auth/signin");
+      },
+      onError: (error) => {
+        toast.error(error.message || "Failed to create account");
+      },
+    });
 
-      router.push("/auth/signin");
-    } catch (error) {
-      console.error("Signup error:", error);
-    }
+  const onSubmit = async (data: CreateCompanyAccountDtoType) => {
+    createCompanyAccountMutation.mutate(data);
   };
 
   return (
@@ -167,9 +169,9 @@ export default function Page_CompanySignup() {
               <Button
                 type="submit"
                 className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
-                disabled={form.formState.isSubmitting}
+                disabled={createCompanyAccountMutation.isPending}
               >
-                {form.formState.isSubmitting
+                {createCompanyAccountMutation.isPending
                   ? "Creating Account..."
                   : "Sign Up"}
               </Button>

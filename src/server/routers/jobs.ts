@@ -1,5 +1,5 @@
 import prisma from "@/lib/prisma";
-import { publicProcedure, router } from "../trpc";
+import { publicProcedure, router, companyProcedure } from "../trpc";
 import z from "zod";
 
 export const jobsRouter = router({
@@ -182,5 +182,171 @@ export const jobsRouter = router({
           applicationCount: job._count.Application,
         })),
       }));
+    }),
+
+  // Create a new job (company procedure)
+  create: companyProcedure
+    .input(
+      z.object({
+        title: z.string().min(3, "Title must be at least 3 characters"),
+        description: z.string().optional(),
+        location: z.string().optional(),
+        tags: z.array(z.string()).default([]),
+        salaryMin: z.number().optional(),
+        salaryMax: z.number().min(0, "Maximum salary must be positive"),
+        isRemote: z.boolean().default(false),
+        eventId: z.number().min(1, "Event ID is required"),
+      })
+    )
+    .mutation(async (opts) => {
+      const { ctx, input } = opts;
+
+      // Get company from admin profile
+      const adminProfile = await prisma.adminCompanyProfile.findUnique({
+        where: { userId: ctx.user.userId },
+        include: { company: true },
+      });
+
+      if (!adminProfile) {
+        throw new Error("Company profile not found");
+      }
+
+      // Check if company is participating in this event
+      const participation =
+        await prisma.eventCompanyParticipation.findUnique({
+          where: {
+            eventId_companyId: {
+              eventId: input.eventId,
+              companyId: adminProfile.companyId,
+            },
+          },
+        });
+
+      if (!participation) {
+        throw new Error(
+          "Your company is not participating in this event. Please join the event first."
+        );
+      }
+
+      // Create the job
+      const job = await prisma.job.create({
+        data: {
+          title: input.title,
+          description: input.description,
+          location: input.location,
+          tags: input.tags,
+          salaryMin: input.salaryMin,
+          salaryMax: input.salaryMax,
+          isRemote: input.isRemote,
+          eventId: input.eventId,
+          companyId: adminProfile.companyId,
+        },
+        include: {
+          company: true,
+          event: true,
+        },
+      });
+
+      return job;
+    }),
+
+  // Update a job (company procedure)
+  update: companyProcedure
+    .input(
+      z.object({
+        id: z.number().min(1, "Job ID is required"),
+        title: z.string().min(3, "Title must be at least 3 characters").optional(),
+        description: z.string().optional(),
+        location: z.string().optional(),
+        tags: z.array(z.string()).optional(),
+        salaryMin: z.number().optional(),
+        salaryMax: z.number().min(0, "Maximum salary must be positive").optional(),
+        isRemote: z.boolean().optional(),
+      })
+    )
+    .mutation(async (opts) => {
+      const { ctx, input } = opts;
+
+      // Get company from admin profile
+      const adminProfile = await prisma.adminCompanyProfile.findUnique({
+        where: { userId: ctx.user.userId },
+      });
+
+      if (!adminProfile) {
+        throw new Error("Company profile not found");
+      }
+
+      // Check if job belongs to this company
+      const job = await prisma.job.findUnique({
+        where: { id: input.id },
+      });
+
+      if (!job) {
+        throw new Error("Job not found");
+      }
+
+      if (job.companyId !== adminProfile.companyId) {
+        throw new Error("You don't have permission to update this job");
+      }
+
+      // Update the job
+      const updatedJob = await prisma.job.update({
+        where: { id: input.id },
+        data: {
+          ...(input.title && { title: input.title }),
+          ...(input.description !== undefined && { description: input.description }),
+          ...(input.location !== undefined && { location: input.location }),
+          ...(input.tags && { tags: input.tags }),
+          ...(input.salaryMin !== undefined && { salaryMin: input.salaryMin }),
+          ...(input.salaryMax !== undefined && { salaryMax: input.salaryMax }),
+          ...(input.isRemote !== undefined && { isRemote: input.isRemote }),
+        },
+        include: {
+          company: true,
+          event: true,
+        },
+      });
+
+      return updatedJob;
+    }),
+
+  // Delete a job (company procedure)
+  delete: companyProcedure
+    .input(
+      z.object({
+        id: z.number().min(1, "Job ID is required"),
+      })
+    )
+    .mutation(async (opts) => {
+      const { ctx, input } = opts;
+
+      // Get company from admin profile
+      const adminProfile = await prisma.adminCompanyProfile.findUnique({
+        where: { userId: ctx.user.userId },
+      });
+
+      if (!adminProfile) {
+        throw new Error("Company profile not found");
+      }
+
+      // Check if job belongs to this company
+      const job = await prisma.job.findUnique({
+        where: { id: input.id },
+      });
+
+      if (!job) {
+        throw new Error("Job not found");
+      }
+
+      if (job.companyId !== adminProfile.companyId) {
+        throw new Error("You don't have permission to delete this job");
+      }
+
+      // Delete the job
+      await prisma.job.delete({
+        where: { id: input.id },
+      });
+
+      return { success: true, message: "Job deleted successfully" };
     }),
 });
