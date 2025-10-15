@@ -90,7 +90,20 @@ export default function JobDetailSheet({
           {/* Company Info */}
           <div className="bg-slate-50 rounded-lg p-4">
             <div className="flex items-center gap-3 mb-2">
-              <Building2 className="h-5 w-5 text-blue-600" />
+              {job.company.logoUrl ? (
+                <div className="w-12 h-12 rounded-lg overflow-hidden bg-white border border-slate-200 flex-shrink-0">
+                  <img
+                    src={job.company.logoUrl}
+                    alt={job.company.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = "none";
+                    }}
+                  />
+                </div>
+              ) : (
+                <Building2 className="h-5 w-5 text-blue-600" />
+              )}
               <h3 className="font-semibold text-lg">{job.company.name}</h3>
             </div>
             {job.company.description && (

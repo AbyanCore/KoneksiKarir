@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { trpc } from "@/components/trpc/trpc-client";
 import { Card } from "@/components/ui/card";
@@ -20,6 +20,7 @@ interface CompanyProfileForm {
 
 export default function CompanyProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
+  const isEditingRef = useRef(false);
   const utils = trpc.useUtils();
 
   // Fetch company profile
@@ -30,6 +31,7 @@ export default function CompanyProfilePage() {
   const updateMutation = trpc.companies.update.useMutation({
     onSuccess: () => {
       toast.success("Profile updated successfully");
+      isEditingRef.current = false;
       setIsEditing(false);
       utils.companies.getMyCompanyProfile.invalidate();
     },
@@ -50,7 +52,7 @@ export default function CompanyProfilePage() {
 
   // Update form when profile loads - use useEffect to prevent infinite re-renders
   useEffect(() => {
-    if (profile && !isLoading && !isEditing) {
+    if (profile && !isLoading && !isEditingRef.current) {
       form.reset({
         name: profile.name,
         description: profile.description || "",
@@ -59,9 +61,13 @@ export default function CompanyProfilePage() {
         logoUrl: profile.logoUrl || "",
       });
     }
-  }, [profile, isLoading, isEditing, form]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile, isLoading]);
 
-  const onSubmit = (data: CompanyProfileForm) => {
+  const onSubmit = (
+    data: CompanyProfileForm,
+    event?: React.BaseSyntheticEvent
+  ) => {
     if (!profile) return;
 
     updateMutation.mutate({
@@ -83,11 +89,13 @@ export default function CompanyProfilePage() {
         website: profile.website || "",
         logoUrl: profile.logoUrl || "",
       });
+      isEditingRef.current = true;
       setIsEditing(true);
     }
   };
 
   const handleCancel = () => {
+    isEditingRef.current = false;
     setIsEditing(false);
     if (profile) {
       form.reset({

@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { trpc } from "@/components/trpc/trpc-client";
 import { useAuth } from "@/components/auth/auth-provider";
 import { toast } from "sonner";
+import { Card } from "@/components/ui/card";
 import { Form } from "@/components/ui/form";
 import BasicInformationCard from "./BasicInformationCard";
 import EducationCard from "./EducationCard";
@@ -17,28 +16,17 @@ import DocumentsCard from "./DocumentsCard";
 import PrivateInformationCard from "./PrivateInformationCard";
 import ProfileActions from "./ProfileActions";
 
-// Profile form schema
-const profileFormSchema = z.object({
-  email: z.string().email("Please enter a valid email address"),
-  fullName: z.string().min(2, "Full name must be at least 2 characters"),
-  bio: z.string().optional(),
-  lastEducationLevel: z.string().optional(),
-  graduationYear: z.string().optional(),
-  institutionName: z.string().optional(),
-  resumeUrl: z
-    .string()
-    .url("Please enter a valid URL")
-    .optional()
-    .or(z.literal("")),
-  portfolioUrl: z
-    .string()
-    .url("Please enter a valid URL")
-    .optional()
-    .or(z.literal("")),
-  NIK: z.string().optional(),
-});
-
-type ProfileFormValues = z.infer<typeof profileFormSchema>;
+interface ProfileForm {
+  email: string;
+  fullName: string;
+  bio: string | null;
+  lastEducationLevel: string | null;
+  graduationYear: string | null;
+  institutionName: string | null;
+  resumeUrl: string | null;
+  portfolioUrl: string | null;
+  NIK: string | null;
+}
 
 interface SocialLink {
   type: string;
@@ -47,12 +35,15 @@ interface SocialLink {
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user, isLoading: isAuthLoading, isAuthenticated } = useAuth();
+  const { isLoading: isAuthLoading, isAuthenticated } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
+  const isEditingRef = useRef(false);
   const [skills, setSkills] = useState<string[]>([]);
   const [newSkill, setNewSkill] = useState("");
   const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
   const [phoneNumbers, setPhoneNumbers] = useState<string[]>([]);
+
+  const utils = trpc.useUtils();
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -62,7 +53,7 @@ export default function ProfilePage() {
     }
   }, [isAuthLoading, isAuthenticated, router]);
 
-  // Fetch user profile
+  // Fetch profile
   const { data: userData, isLoading } = trpc.profile.getMyProfile.useQuery(
     undefined,
     {
@@ -72,21 +63,20 @@ export default function ProfilePage() {
     }
   );
 
-  // Update profile mutation
-  const updateProfile = trpc.profile.updateMyProfile.useMutation({
+  // Update mutation
+  const updateMutation = trpc.profile.updateMyProfile.useMutation({
     onSuccess: () => {
       toast.success("Profile updated successfully!");
+      isEditingRef.current = false;
       setIsEditing(false);
-      // Invalidate and refetch
-      trpc.useContext().profile.getMyProfile.invalidate();
+      utils.profile.getMyProfile.invalidate();
     },
     onError: (error) => {
       toast.error(error.message || "Failed to update profile");
     },
   });
 
-  const form = useForm<ProfileFormValues>({
-    resolver: zodResolver(profileFormSchema),
+  const form = useForm<ProfileForm>({
     defaultValues: {
       email: "",
       fullName: "",
@@ -100,11 +90,10 @@ export default function ProfilePage() {
     },
   });
 
-  // Populate form when data is loaded
+  // Update form when profile loads
   useEffect(() => {
-    if (userData?.profile) {
+    if (userData?.profile && !isEditingRef.current) {
       const profile = userData.profile;
-
       form.reset({
         email: userData.email,
         fullName: profile.fullName || "",
@@ -116,50 +105,72 @@ export default function ProfilePage() {
         portfolioUrl: profile.portfolioUrl || "",
         NIK: profile.NIK || "",
       });
-
       setSkills(profile.skills || []);
       setSocialLinks(profile.socialLinks || []);
       setPhoneNumbers(profile.phoneNumber || []);
-    } else if (userData && !userData.profile) {
-      // New user - set email only
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userData]);
+
+  const onSubmit = (data: ProfileForm) => {
+    updateMutation.mutate({
+      fullName: data.fullName,
+      bio: data.bio || undefined,
+      lastEducationLevel: data.lastEducationLevel || undefined,
+      graduationYear: data.graduationYear
+        ? parseInt(data.graduationYear)
+        : null,
+      institutionName: data.institutionName || undefined,
+      skills,
+      socialLinks,
+      resumeUrl: data.resumeUrl || undefined,
+      portfolioUrl: data.portfolioUrl || undefined,
+      NIK: data.NIK || undefined,
+      phoneNumber: phoneNumbers.filter((phone) => phone.trim() !== ""),
+    });
+  };
+
+  const handleEdit = () => {
+    if (userData?.profile) {
+      const profile = userData.profile;
       form.reset({
         email: userData.email,
-        fullName: "",
-        bio: "",
-        lastEducationLevel: "",
-        graduationYear: "",
-        institutionName: "",
-        resumeUrl: "",
-        portfolioUrl: "",
-        NIK: "",
+        fullName: profile.fullName || "",
+        bio: profile.bio || "",
+        lastEducationLevel: profile.lastEducationLevel || "",
+        graduationYear: profile.graduationYear?.toString() || "",
+        institutionName: profile.institutionName || "",
+        resumeUrl: profile.resumeUrl || "",
+        portfolioUrl: profile.portfolioUrl || "",
+        NIK: profile.NIK || "",
       });
-      setSkills([]);
-      setSocialLinks([]);
-      setPhoneNumbers([]);
+      setSkills(profile.skills || []);
+      setSocialLinks(profile.socialLinks || []);
+      setPhoneNumbers(profile.phoneNumber || []);
+      isEditingRef.current = true;
+      setIsEditing(true);
     }
-  }, [userData, form]);
+  };
 
-  const onSubmit = async (data: ProfileFormValues) => {
-    try {
-      const profileData = {
-        fullName: data.fullName,
-        bio: data.bio,
-        lastEducationLevel: data.lastEducationLevel,
-        graduationYear: data.graduationYear
-          ? parseInt(data.graduationYear)
-          : null,
-        institutionName: data.institutionName,
-        skills,
-        socialLinks,
-        resumeUrl: data.resumeUrl,
-        portfolioUrl: data.portfolioUrl,
-        NIK: data.NIK,
-        phoneNumber: phoneNumbers.filter((phone) => phone.trim() !== ""),
-      };
-
-      await updateProfile.mutateAsync(profileData);
-    } catch (error) {
-      console.error("Profile update error:", error);
+  const handleCancel = () => {
+    isEditingRef.current = false;
+    setIsEditing(false);
+    if (userData?.profile) {
+      const profile = userData.profile;
+      form.reset({
+        email: userData.email,
+        fullName: profile.fullName || "",
+        bio: profile.bio || "",
+        lastEducationLevel: profile.lastEducationLevel || "",
+        graduationYear: profile.graduationYear?.toString() || "",
+        institutionName: profile.institutionName || "",
+        resumeUrl: profile.resumeUrl || "",
+        portfolioUrl: profile.portfolioUrl || "",
+        NIK: profile.NIK || "",
+      });
+      setSkills(profile.skills || []);
+      setSocialLinks(profile.socialLinks || []);
+      setPhoneNumbers(profile.phoneNumber || []);
     }
   };
 
@@ -209,80 +220,42 @@ export default function ProfilePage() {
     setPhoneNumbers(phoneNumbers.filter((_, i) => i !== index));
   };
 
-  // Handle cancel editing
-  const handleCancel = () => {
-    setIsEditing(false);
-    // Reset form to original values
-    if (userData?.profile) {
-      const profile = userData.profile;
-      form.reset({
-        email: userData.email,
-        fullName: profile.fullName || "",
-        bio: profile.bio || "",
-        lastEducationLevel: profile.lastEducationLevel || "",
-        graduationYear: profile.graduationYear?.toString() || "",
-        institutionName: profile.institutionName || "",
-        resumeUrl: profile.resumeUrl || "",
-        portfolioUrl: profile.portfolioUrl || "",
-        NIK: profile.NIK || "",
-      });
-      setSkills(profile.skills || []);
-      setSocialLinks(profile.socialLinks || []);
-      setPhoneNumbers(profile.phoneNumber || []);
-    }
-  };
-
-  // Loading state
   if (isAuthLoading || isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
-        <div className="max-w-4xl mx-auto px-4 py-8">
-          <div className="animate-pulse space-y-6">
-            <div className="h-20 bg-slate-200 rounded-lg" />
-            <div className="h-96 bg-slate-200 rounded-lg" />
-            <div className="h-64 bg-slate-200 rounded-lg" />
-          </div>
+      <div className="container mx-auto p-6">
+        <div className="max-w-4xl mx-auto space-y-6">
+          <Card className="p-6">
+            <div className="animate-pulse space-y-4">
+              <div className="h-8 bg-gray-200 rounded w-1/3"></div>
+              <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+            </div>
+          </Card>
         </div>
       </div>
     );
   }
 
-  // Not authenticated
   if (!isAuthenticated) {
-    return null; // Will redirect via useEffect
+    return null;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-6">
+    <div className="container mx-auto p-6">
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              My Profile
-            </h1>
-            <p className="text-muted-foreground mt-1">
+            <h1 className="text-3xl font-bold">My Profile</h1>
+            <p className="text-gray-500 mt-1">
               Manage your personal information and preferences
             </p>
           </div>
-          <ProfileActions
-            isEditing={isEditing}
-            isSubmitting={
-              form.formState.isSubmitting || updateProfile.isPending
-            }
-            onEdit={() => setIsEditing(true)}
-            onCancel={handleCancel}
-          />
         </div>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* Basic Information */}
             <BasicInformationCard form={form} isEditing={isEditing} />
-
-            {/* Education */}
             <EducationCard form={form} isEditing={isEditing} />
-
-            {/* Skills */}
             <SkillsCard
               skills={skills}
               newSkill={newSkill}
@@ -291,8 +264,6 @@ export default function ProfilePage() {
               onAddSkill={addSkill}
               onRemoveSkill={removeSkill}
             />
-
-            {/* Social Links */}
             <SocialLinksCard
               socialLinks={socialLinks}
               isEditing={isEditing}
@@ -300,11 +271,7 @@ export default function ProfilePage() {
               onAddLink={addSocialLink}
               onRemoveLink={removeSocialLink}
             />
-
-            {/* Documents */}
             <DocumentsCard form={form} isEditing={isEditing} />
-
-            {/* Private Information */}
             <PrivateInformationCard
               form={form}
               phoneNumbers={phoneNumbers}
@@ -314,16 +281,12 @@ export default function ProfilePage() {
               onRemovePhoneNumber={removePhoneNumber}
             />
 
-            {isEditing && (
-              <ProfileActions
-                isEditing={isEditing}
-                isSubmitting={
-                  form.formState.isSubmitting || updateProfile.isPending
-                }
-                onEdit={() => setIsEditing(true)}
-                onCancel={handleCancel}
-              />
-            )}
+            <ProfileActions
+              isEditing={isEditing}
+              isSubmitting={updateMutation.isPending}
+              onEdit={handleEdit}
+              onCancel={handleCancel}
+            />
           </form>
         </Form>
       </div>

@@ -155,7 +155,7 @@ useEffect(() => {
 
 ```diff
   "use client";
-  
+
 - import { useState } from "react";
 + import { useState, useEffect } from "react";
   import { useForm } from "react-hook-form";
@@ -476,16 +476,19 @@ Enable "Highlight updates" to see which components re-render:
 ## Summary
 
 **Issues Fixed:**
+
 1. **Infinite re-render loop** - `form.reset()` called during render
 2. **Form context missing** - Form components used without `FormProvider`
 
 **Solutions Applied:**
+
 1. Moved `form.reset()` into `useEffect` hook with proper dependencies
 2. Wrapped form with `<Form {...form}>` component to provide context
 
 **Status:** ✅ Both issues fixed and tested
 
-**Impact:** 
+**Impact:**
+
 - Page now stable and performant
 - All form components work correctly
 - No runtime errors

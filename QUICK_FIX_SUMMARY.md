@@ -7,11 +7,13 @@
 Your company profile page had **TWO critical errors**:
 
 ### Error 1: Infinite Re-renders ♾️
+
 ```
 Error: Too many re-renders. React limits the number of renders to prevent an infinite loop.
 ```
 
 ### Error 2: Form Context Missing ❌
+
 ```
 TypeError: Cannot destructure property 'getFieldState' of 'useFormContext()' as it is null.
 ```
@@ -23,6 +25,7 @@ TypeError: Cannot destructure property 'getFieldState' of 'useFormContext()' as 
 ### Fix 1: Wrapped `form.reset()` in `useEffect`
 
 **Before:**
+
 ```typescript
 // ❌ Called during render - causes infinite loop
 if (profile && !isLoading && !isEditing) {
@@ -31,6 +34,7 @@ if (profile && !isLoading && !isEditing) {
 ```
 
 **After:**
+
 ```typescript
 // ✅ Called in useEffect - only runs when dependencies change
 useEffect(() => {
@@ -43,6 +47,7 @@ useEffect(() => {
 ### Fix 2: Added `Form` Provider
 
 **Before:**
+
 ```typescript
 // ❌ No FormProvider - form components can't access context
 <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -51,6 +56,7 @@ useEffect(() => {
 ```
 
 **After:**
+
 ```typescript
 // ✅ Form component provides context to all children
 <Form {...form}>
@@ -90,11 +96,13 @@ useEffect(() => {
 ## Why This Happened
 
 ### Issue 1: React Rules
+
 - You **can't** call state setters during render
 - `form.reset()` updates state → triggers re-render → calls `form.reset()` again → **infinite loop**
 - Solution: Use `useEffect` for side effects
 
 ### Issue 2: React Hook Form Requirements
+
 - `FormField`, `FormLabel`, etc. use `useFormContext()` internally
 - `useFormContext()` needs a `FormProvider` in the component tree
 - Without it, returns `null` → **TypeError when destructuring**

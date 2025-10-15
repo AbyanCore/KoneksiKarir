@@ -163,9 +163,7 @@ export default function CompanyDashboardPage() {
           <TabsContent value="events" className="space-y-4">
             <Card className="p-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold">
-                  Participating Events
-                </h2>
+                <h2 className="text-xl font-semibold">Participating Events</h2>
                 <JoinEventDialog />
               </div>
               <EventsCards events={data.events} />

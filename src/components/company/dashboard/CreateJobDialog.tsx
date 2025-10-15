@@ -12,10 +12,24 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Plus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -73,7 +87,10 @@ export default function CreateJobDialog({ events }: CreateJobDialogProps) {
       description: data.description || undefined,
       location: data.location || undefined,
       tags: data.tags
-        ? data.tags.split(",").map((tag) => tag.trim()).filter(Boolean)
+        ? data.tags
+            .split(",")
+            .map((tag) => tag.trim())
+            .filter(Boolean)
         : [],
       salaryMin: data.salaryMin ? parseInt(data.salaryMin) : undefined,
       salaryMax: parseInt(data.salaryMax),

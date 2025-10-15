@@ -24,7 +24,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, MapPin, Building2, Loader2, UserPlus } from "lucide-react";
+import {
+  CalendarDays,
+  MapPin,
+  Building2,
+  Loader2,
+  UserPlus,
+} from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -171,10 +177,7 @@ export default function JoinEventDialog() {
                   <FormItem>
                     <FormLabel>Stand/Booth Number *</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="e.g. A-101, B-23, etc."
-                        {...field}
-                      />
+                      <Input placeholder="e.g. A-101, B-23, etc." {...field} />
                     </FormControl>
                     <FormDescription>
                       Enter your assigned booth or stand number for this event

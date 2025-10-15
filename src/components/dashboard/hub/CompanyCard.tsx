@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -68,19 +67,20 @@ export default function CompanyCard({
       >
         <div className="flex items-start gap-4">
           <div className="relative w-16 h-16 bg-white rounded-xl flex-shrink-0 overflow-hidden shadow-sm border border-slate-200">
-            <Image
-              src={company.logoUrl || "/placeholder-logo.jpg"}
-              alt={company.name}
-              fill
-              className="object-cover"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.style.display = "none";
-              }}
-            />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <Building2 className="h-8 w-8 text-slate-400" />
-            </div>
+            {company.logoUrl ? (
+              <img
+                src={company.logoUrl}
+                alt={company.name}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = "none";
+                }}
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Building2 className="h-8 w-8 text-slate-400" />
+              </div>
+            )}
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-lg truncate mb-1">

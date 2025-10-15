@@ -12,16 +12,12 @@ export const UpdateJobSeekerProfileDto = z.object({
     .array(
       z.object({
         type: z.string(),
-        url: z.string().url("Invalid URL format"),
+        url: z.string(),
       })
     )
     .default([]),
-  resumeUrl: z.string().url("Invalid URL format").optional().or(z.literal("")),
-  portfolioUrl: z
-    .string()
-    .url("Invalid URL format")
-    .optional()
-    .or(z.literal("")),
+  resumeUrl: z.string().or(z.literal("")).optional(),
+  portfolioUrl: z.string().or(z.literal("")).optional(),
   NIK: z.string().optional(),
   phoneNumber: z.array(z.string()).default([]),
 });

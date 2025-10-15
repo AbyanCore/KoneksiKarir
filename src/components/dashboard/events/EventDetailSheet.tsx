@@ -56,8 +56,22 @@ export default function EventDetailSheet({
         </SheetHeader>
 
         <div className="space-y-4 p-4">
-          <div className="relative h-40 rounded-lg bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100 flex items-center justify-center">
-            <ImageIcon className="h-12 w-12 text-slate-400" />
+          {/* Event Banner */}
+          <div className="relative h-40 rounded-lg bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100 overflow-hidden">
+            {event.bannerUrl ? (
+              <img
+                src={event.bannerUrl}
+                alt={event.title}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = "none";
+                }}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <ImageIcon className="h-12 w-12 text-slate-400" />
+              </div>
+            )}
           </div>
 
           <div>
@@ -163,6 +177,23 @@ export default function EventDetailSheet({
                 </div>
               </div>
             )}
+
+          {/* Event Minimap */}
+          {event.minimapUrl && (
+            <div className="border-t pt-3">
+              <h4 className="font-semibold mb-2 text-sm">Event Location Map</h4>
+              <div className="relative w-full h-64 rounded-lg bg-slate-100 overflow-hidden">
+                <img
+                  src={event.minimapUrl}
+                  alt={`${event.title} location map`}
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = "none";
+                  }}
+                />
+              </div>
+            </div>
+          )}
 
           <div className="border-t pt-3 text-xs text-slate-500">
             <p>Created: {new Date(event.createdAt).toLocaleString()}</p>

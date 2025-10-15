@@ -14,18 +14,20 @@ export default function EventMinimap({ minimapUrl, title }: EventMinimapProps) {
           Tap on company booths to view details
         </p>
         <div className="relative w-full aspect-video bg-slate-100 rounded-xl overflow-hidden shadow-lg">
-          <img
-            src={minimapUrl}
-            alt={`${title} minimap`}
-            className="object-cover"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              target.style.display = "none";
-            }}
-          />
-          <div className="absolute inset-0 flex items-center justify-center text-slate-400">
-            <MapPin className="h-16 w-16" />
-          </div>
+          {minimapUrl ? (
+            <img
+              src={minimapUrl}
+              alt={`${title} minimap`}
+              className="w-full h-full object-contain"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = "none";
+              }}
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center text-slate-400">
+              <MapPin className="h-16 w-16" />
+            </div>
+          )}
         </div>
       </div>
     </div>

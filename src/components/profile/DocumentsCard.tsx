@@ -1,20 +1,17 @@
-import { FileText } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+"use client";
+
+import { UseFormReturn } from "react-hook-form";
 import {
   FormControl,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { UseFormReturn } from "react-hook-form";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FileText } from "lucide-react";
+import FileUpload, { FileUploadResponse } from "@/components/ui/file-upload";
 
 interface DocumentsCardProps {
   form: UseFormReturn<any>;
@@ -23,13 +20,12 @@ interface DocumentsCardProps {
 
 export default function DocumentsCard({ form, isEditing }: DocumentsCardProps) {
   return (
-    <Card className="shadow-lg border-t-4 border-t-pink-500">
+    <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <FileText className="h-5 w-5 text-pink-600" />
+          <FileText className="h-5 w-5" />
           Documents
         </CardTitle>
-        <CardDescription>Your resume and portfolio links</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <FormField
@@ -37,14 +33,45 @@ export default function DocumentsCard({ form, isEditing }: DocumentsCardProps) {
           name="resumeUrl"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Resume URL</FormLabel>
+              <FormLabel>Resume / CV</FormLabel>
               <FormControl>
-                <Input
-                  placeholder="https://drive.google.com/..."
-                  {...field}
-                  disabled={!isEditing}
-                />
+                <div className="space-y-4">
+                  {isEditing ? (
+                    <FileUpload
+                      accept=".pdf,.doc,.docx"
+                      maxSize={5}
+                      label="Upload Resume/CV"
+                      description="PDF, DOC, DOCX up to 5MB"
+                      currentFileUrl={field.value || undefined}
+                      showPreview={true}
+                      disabled={!isEditing}
+                      onUploadSuccess={(data: FileUploadResponse) => {
+                        field.onChange(data.url);
+                      }}
+                      onUploadError={(error) => {
+                        console.error("Resume upload error:", error);
+                      }}
+                    />
+                  ) : (
+                    field.value && (
+                      <div className="flex items-center gap-2 p-3 border rounded-lg bg-gray-50">
+                        <FileText className="h-4 w-4 text-gray-500" />
+                        <a
+                          href={field.value}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-600 hover:underline"
+                        >
+                          View Resume
+                        </a>
+                      </div>
+                    )
+                  )}
+                </div>
               </FormControl>
+              <FormDescription>
+                Upload your resume or CV (max 5MB)
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -55,14 +82,45 @@ export default function DocumentsCard({ form, isEditing }: DocumentsCardProps) {
           name="portfolioUrl"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Portfolio URL</FormLabel>
+              <FormLabel>Portfolio</FormLabel>
               <FormControl>
-                <Input
-                  placeholder="https://yourportfolio.com"
-                  {...field}
-                  disabled={!isEditing}
-                />
+                <div className="space-y-4">
+                  {isEditing ? (
+                    <FileUpload
+                      accept=".pdf,.doc,.docx"
+                      maxSize={10}
+                      label="Upload Portfolio"
+                      description="PDF, DOC, DOCX up to 10MB"
+                      currentFileUrl={field.value || undefined}
+                      showPreview={true}
+                      disabled={!isEditing}
+                      onUploadSuccess={(data: FileUploadResponse) => {
+                        field.onChange(data.url);
+                      }}
+                      onUploadError={(error) => {
+                        console.error("Portfolio upload error:", error);
+                      }}
+                    />
+                  ) : (
+                    field.value && (
+                      <div className="flex items-center gap-2 p-3 border rounded-lg bg-gray-50">
+                        <FileText className="h-4 w-4 text-gray-500" />
+                        <a
+                          href={field.value}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-600 hover:underline"
+                        >
+                          View Portfolio
+                        </a>
+                      </div>
+                    )
+                  )}
+                </div>
               </FormControl>
+              <FormDescription>
+                Upload your portfolio document (max 10MB)
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}

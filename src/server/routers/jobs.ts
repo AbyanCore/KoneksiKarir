@@ -212,15 +212,14 @@ export const jobsRouter = router({
       }
 
       // Check if company is participating in this event
-      const participation =
-        await prisma.eventCompanyParticipation.findUnique({
-          where: {
-            eventId_companyId: {
-              eventId: input.eventId,
-              companyId: adminProfile.companyId,
-            },
+      const participation = await prisma.eventCompanyParticipation.findUnique({
+        where: {
+          eventId_companyId: {
+            eventId: input.eventId,
+            companyId: adminProfile.companyId,
           },
-        });
+        },
+      });
 
       if (!participation) {
         throw new Error(
@@ -255,12 +254,18 @@ export const jobsRouter = router({
     .input(
       z.object({
         id: z.number().min(1, "Job ID is required"),
-        title: z.string().min(3, "Title must be at least 3 characters").optional(),
+        title: z
+          .string()
+          .min(3, "Title must be at least 3 characters")
+          .optional(),
         description: z.string().optional(),
         location: z.string().optional(),
         tags: z.array(z.string()).optional(),
         salaryMin: z.number().optional(),
-        salaryMax: z.number().min(0, "Maximum salary must be positive").optional(),
+        salaryMax: z
+          .number()
+          .min(0, "Maximum salary must be positive")
+          .optional(),
         isRemote: z.boolean().optional(),
       })
     )
@@ -294,7 +299,9 @@ export const jobsRouter = router({
         where: { id: input.id },
         data: {
           ...(input.title && { title: input.title }),
-          ...(input.description !== undefined && { description: input.description }),
+          ...(input.description !== undefined && {
+            description: input.description,
+          }),
           ...(input.location !== undefined && { location: input.location }),
           ...(input.tags && { tags: input.tags }),
           ...(input.salaryMin !== undefined && { salaryMin: input.salaryMin }),

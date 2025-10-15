@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Sheet,
   SheetContent,
@@ -10,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import FileUpload, { FileUploadResponse } from "@/components/ui/file-upload";
 
 interface EventFormData {
   title: string;
@@ -122,29 +125,35 @@ export default function EventFormSheet({
 
           <div className="grid gap-2">
             <Label htmlFor="bannerUrl" className="text-sm">
-              Banner URL
+              Event Banner
             </Label>
-            <Input
-              id="bannerUrl"
-              placeholder="/events/banner.jpg"
-              value={formData.bannerUrl}
-              onChange={(e) =>
-                onFormDataChange({ ...formData, bannerUrl: e.target.value })
-              }
+            <FileUpload
+              accept="image/*"
+              maxSize={10}
+              label="Upload Event Banner"
+              description="Upload banner image (1920x1080 recommended, max 10MB)"
+              currentFileUrl={formData.bannerUrl || undefined}
+              showPreview={true}
+              onUploadSuccess={(data: FileUploadResponse) => {
+                onFormDataChange({ ...formData, bannerUrl: data.url });
+              }}
             />
           </div>
 
           <div className="grid gap-2">
             <Label htmlFor="minimapUrl" className="text-sm">
-              Minimap URL
+              Event Minimap
             </Label>
-            <Input
-              id="minimapUrl"
-              placeholder="/events/minimap.jpg"
-              value={formData.minimapUrl}
-              onChange={(e) =>
-                onFormDataChange({ ...formData, minimapUrl: e.target.value })
-              }
+            <FileUpload
+              accept="image/*"
+              maxSize={5}
+              label="Upload Event Minimap"
+              description="Upload minimap image (max 5MB)"
+              currentFileUrl={formData.minimapUrl || undefined}
+              showPreview={true}
+              onUploadSuccess={(data: FileUploadResponse) => {
+                onFormDataChange({ ...formData, minimapUrl: data.url });
+              }}
             />
           </div>
         </div>

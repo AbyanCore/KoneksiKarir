@@ -7,10 +7,12 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Globe, Image } from "lucide-react";
+import FileUpload, { FileUploadResponse } from "@/components/ui/file-upload";
 
 interface ContactInfoCardProps {
   form: UseFormReturn<any>;
@@ -57,37 +59,56 @@ export default function ContactInfoCard({
               <FormLabel>
                 <div className="flex items-center gap-2">
                   <Image className="h-4 w-4" />
-                  Company Logo URL
+                  Company Logo
                 </div>
               </FormLabel>
               <FormControl>
-                <Input
-                  {...field}
-                  disabled={!isEditing}
-                  type="url"
-                  placeholder="https://example.com/logo.png"
-                />
+                <div
+                  className="space-y-4"
+                  onMouseDown={(e) => e.stopPropagation()}
+                >
+                  {isEditing ? (
+                    <div onSubmit={(e) => e.preventDefault()}>
+                      <FileUpload
+                        accept="image/*"
+                        maxSize={5}
+                        label="Upload Company Logo"
+                        description="PNG, JPG, GIF up to 5MB"
+                        currentFileUrl={field.value || undefined}
+                        showPreview={true}
+                        disabled={!isEditing}
+                        onUploadSuccess={(data: FileUploadResponse) => {
+                          field.onChange(data.url);
+                        }}
+                        onUploadError={(error) => {
+                          console.error("Logo upload error:", error);
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    field.value && (
+                      <div className="border rounded-lg p-4 bg-gray-50 flex items-center justify-center">
+                        <img
+                          src={field.value}
+                          alt="Company Logo"
+                          className="max-h-32 max-w-full object-contain"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display =
+                              "none";
+                          }}
+                        />
+                      </div>
+                    )
+                  )}
+                </div>
               </FormControl>
+              <FormDescription>
+                Upload your company logo (max 5MB)
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
-
-        {form.watch("logoUrl") && (
-          <div className="mt-4">
-            <p className="text-sm font-medium mb-2">Logo Preview:</p>
-            <div className="border rounded-lg p-4 bg-gray-50 flex items-center justify-center">
-              <img
-                src={form.watch("logoUrl")}
-                alt="Company Logo"
-                className="max-h-32 max-w-full object-contain"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = "none";
-                }}
-              />
-            </div>
-          </div>
-        )}
       </CardContent>
     </Card>
   );

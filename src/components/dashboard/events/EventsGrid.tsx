@@ -67,9 +67,21 @@ export default function EventsGrid({
             className="overflow-hidden hover:shadow-xl transition-all duration-300 border-slate-200 bg-white/90 backdrop-blur-sm"
           >
             <div className="relative h-32 bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <ImageIcon className="h-10 w-10 text-slate-400" />
-              </div>
+              {event.bannerUrl ? (
+                <img
+                  src={event.bannerUrl}
+                  alt={event.title}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    // Fallback to gradient background on error
+                    (e.target as HTMLImageElement).style.display = "none";
+                  }}
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <ImageIcon className="h-10 w-10 text-slate-400" />
+                </div>
+              )}
               <Badge className="absolute top-2 right-2 text-xs bg-white/90 text-slate-900 hover:bg-white">
                 {isUpcoming ? "Upcoming" : "Past"}
               </Badge>

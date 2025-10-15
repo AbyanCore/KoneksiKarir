@@ -45,24 +45,30 @@ export default function EducationCard({ form, isEditing }: EducationCardProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Education Level</FormLabel>
-              <Select
-                onValueChange={field.onChange}
-                defaultValue={field.value}
-                disabled={!isEditing}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select your education level" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="SMA">SMA</SelectItem>
-                  <SelectItem value="D3">D3</SelectItem>
-                  <SelectItem value="S1">S1</SelectItem>
-                  <SelectItem value="S2">S2</SelectItem>
-                  <SelectItem value="S3">S3</SelectItem>
-                </SelectContent>
-              </Select>
+              <FormControl>
+                {isEditing ? (
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value}
+                    disabled={!isEditing}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select your education level" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="SMA/SMK">SMA/SMK</SelectItem>
+                      <SelectItem value="D3">D3 (Diploma)</SelectItem>
+                      <SelectItem value="D4/S1">D4/S1 (Bachelor)</SelectItem>
+                      <SelectItem value="S2">S2 (Master)</SelectItem>
+                      <SelectItem value="S3">S3 (PhD)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                    {field.value || "Not specified"}
+                  </div>
+                )}
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}

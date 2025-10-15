@@ -5,12 +5,15 @@
 ## 🎉 New Features Added
 
 ### 1. **Post Jobs** ✅
+
 Company admins can now create job postings for events they're participating in.
 
 ### 2. **Join Events** ✅
+
 Company admins can participate in upcoming events by selecting a booth/stand number.
 
 ### 3. **Manage Jobs** ✅
+
 Full CRUD operations for job postings (Create, Read, Update, Delete).
 
 ---
@@ -18,9 +21,11 @@ Full CRUD operations for job postings (Create, Read, Update, Delete).
 ## 📁 Files Created
 
 ### 1. `CreateJobDialog.tsx`
+
 **Location:** `src/components/company/dashboard/CreateJobDialog.tsx`
 
 **Features:**
+
 - Dialog form for creating new job postings
 - Event selection dropdown (only shows participating events)
 - Job details: title, description, location, tags, salary range
@@ -29,14 +34,17 @@ Full CRUD operations for job postings (Create, Read, Update, Delete).
 - Success/error toasts
 
 **Required Fields:**
+
 - Event (must be participating)
 - Job Title (min 3 characters)
 - Maximum Salary
 
 ### 2. `JoinEventDialog.tsx`
+
 **Location:** `src/components/company/dashboard/JoinEventDialog.tsx`
 
 **Features:**
+
 - Two-step process:
   1. Select available event from list
   2. Enter booth/stand number
@@ -50,15 +58,18 @@ Full CRUD operations for job postings (Create, Read, Update, Delete).
 ## 🔧 Files Modified
 
 ### 1. `src/server/routers/jobs.ts`
+
 **Added Procedures:**
 
 #### `jobs.create` (companyProcedure)
+
 - Creates new job posting
 - Validates company participation in event
 - Links job to company and event
 - Returns created job with relations
 
 **Input:**
+
 ```typescript
 {
   title: string (min 3 chars),
@@ -73,11 +84,13 @@ Full CRUD operations for job postings (Create, Read, Update, Delete).
 ```
 
 #### `jobs.update` (companyProcedure)
+
 - Updates existing job posting
 - Verifies job ownership
 - Partial updates (only provided fields)
 
 **Input:**
+
 ```typescript
 {
   id: number,
@@ -92,23 +105,27 @@ Full CRUD operations for job postings (Create, Read, Update, Delete).
 ```
 
 #### `jobs.delete` (companyProcedure)
+
 - Deletes job posting
 - Verifies job ownership
 - Returns success message
 
 **Input:**
+
 ```typescript
 {
-  id: number
+  id: number;
 }
 ```
 
 ---
 
 ### 2. `src/server/routers/events.ts`
+
 **Added Procedures:**
 
 #### `events.joinEvent` (companyProcedure)
+
 - Join an event as a company
 - Validates event exists
 - Checks for duplicate participation
@@ -116,6 +133,7 @@ Full CRUD operations for job postings (Create, Read, Update, Delete).
 - Creates EventCompanyParticipation record
 
 **Input:**
+
 ```typescript
 {
   eventId: number,
@@ -124,55 +142,69 @@ Full CRUD operations for job postings (Create, Read, Update, Delete).
 ```
 
 **Error Cases:**
+
 - Event not found
 - Already participating
 - Stand number taken
 
 #### `events.leaveEvent` (companyProcedure)
+
 - Leave an event
 - Validates participation exists
 - Prevents leaving if active jobs exist
 - Deletes participation record
 
 **Input:**
+
 ```typescript
 {
-  eventId: number
+  eventId: number;
 }
 ```
 
 **Error Cases:**
+
 - Not participating
 - Has active job postings
 
 #### `events.getAvailableEvents` (companyProcedure)
+
 - Lists events not yet joined
 - Only shows future events (date >= today)
 - Includes participation and job counts
 - Sorted by date (ascending)
 
 **Returns:**
+
 ```typescript
 Array<{
-  id, title, description, date, location,
-  bannerUrl, minimapUrl,
+  id;
+  title;
+  description;
+  date;
+  location;
+  bannerUrl;
+  minimapUrl;
   _count: {
-    EventCompanyParticipation: number,
-    Job: number
-  }
-}>
+    EventCompanyParticipation: number;
+    Job: number;
+  };
+}>;
 ```
 
 ---
 
 ### 3. `src/app/(routes)/s/company/dashboard/page.tsx`
+
 **Changes:**
+
 - Imported `CreateJobDialog` and `JoinEventDialog`
 - Added "Create New Job" button in Jobs tab (conditional on event participation)
 - Added "Join Event" button in Events tab
 - Shows message if no events joined yet
 
 **UI Updates:**
+
 ```tsx
 // Jobs Tab
 <CreateJobDialog events={data.events} />
@@ -188,13 +220,16 @@ Array<{
 ## 🔐 Security & Validation
 
 ### Authorization
+
 - All new procedures use `companyProcedure` middleware
 - Ensures only ADMIN_COMPANY role can access
 - Validates company profile exists
 - Verifies ownership before updates/deletes
 
 ### Data Validation
+
 - **Job Creation:**
+
   - Must participate in event before posting jobs
   - Title minimum 3 characters
   - Salary max must be positive
@@ -211,6 +246,7 @@ Array<{
 ## 📊 Database Relations
 
 ### Job Model
+
 ```prisma
 model Job {
   id          Int
@@ -223,7 +259,7 @@ model Job {
   isRemote    Boolean
   eventId     Int
   companyId   Int
-  
+
   company     Company
   event       Events
   Application Application[]
@@ -231,16 +267,17 @@ model Job {
 ```
 
 ### EventCompanyParticipation Model
+
 ```prisma
 model EventCompanyParticipation {
   id          Int
   standNumber String
   eventId     Int
   companyId   Int
-  
+
   event   Events
   company Company
-  
+
   @@unique([eventId, companyId])
 }
 ```
@@ -281,6 +318,7 @@ model EventCompanyParticipation {
 ### Leaving an Event
 
 **Note:** Leave functionality can be added later. Currently:
+
 - Must delete all jobs for that event first
 - Call `events.leaveEvent` mutation
 
@@ -289,6 +327,7 @@ model EventCompanyParticipation {
 ## ✅ Testing Checklist
 
 ### Job Posting
+
 - [ ] Can create job for participating event
 - [ ] Cannot create job without event participation
 - [ ] Form validation works
@@ -297,6 +336,7 @@ model EventCompanyParticipation {
 - [ ] Can view job applications
 
 ### Event Participation
+
 - [ ] Can see list of available events
 - [ ] Only shows future events
 - [ ] Can join event with stand number
@@ -306,6 +346,7 @@ model EventCompanyParticipation {
 - [ ] Can create jobs after joining
 
 ### Error Handling
+
 - [ ] Proper error messages shown
 - [ ] Toast notifications work
 - [ ] Form resets after submission
@@ -316,6 +357,7 @@ model EventCompanyParticipation {
 ## 🚀 Next Steps (Future Enhancements)
 
 ### Job Management
+
 - [ ] Add job editing capability
 - [ ] Add job deletion with confirmation
 - [ ] Add job status (Active/Closed/Draft)
@@ -323,6 +365,7 @@ model EventCompanyParticipation {
 - [ ] Add application deadline
 
 ### Event Management
+
 - [ ] Add "Leave Event" button with confirmation
 - [ ] Show event details page
 - [ ] Add event search/filter
@@ -330,6 +373,7 @@ model EventCompanyParticipation {
 - [ ] Show event analytics
 
 ### UI Improvements
+
 - [ ] Add job preview before posting
 - [ ] Add rich text editor for descriptions
 - [ ] Add image upload for job/company
@@ -368,16 +412,19 @@ model EventCompanyParticipation {
 ## 💡 Key Features
 
 1. **Smart Validation:**
+
    - Can only post jobs for events you're in
    - Stand numbers must be unique per event
    - Cannot leave event with active jobs
 
 2. **Real-time Updates:**
+
    - Dashboard refreshes after actions
    - Optimistic UI updates
    - Toast notifications for feedback
 
 3. **User-Friendly:**
+
    - Two-step event joining process
    - Clear error messages
    - Loading states
@@ -405,8 +452,9 @@ model EventCompanyParticipation {
 ✅ **All Features Implemented Successfully!**
 
 Company admins can now:
+
 1. ✅ **Join events** - Select events and assign stand numbers
-2. ✅ **Post jobs** - Create job postings for participating events  
+2. ✅ **Post jobs** - Create job postings for participating events
 3. ✅ **Manage jobs** - Full CRUD operations
 4. ✅ **View applications** - See and manage job applications
 5. ✅ **Track stats** - Dashboard with real-time statistics
