@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { trpc } from "@/components/trpc/trpc-client";
 import {
@@ -31,7 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Loader2 } from "lucide-react";
+import { Plus, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 
 interface CreateJobDialogProps {
@@ -45,7 +45,6 @@ interface CreateJobForm {
   title: string;
   description: string;
   location: string;
-  tags: string;
   salaryMin: string;
   salaryMax: string;
   isRemote: boolean;
@@ -61,7 +60,6 @@ export default function CreateJobDialog({ events }: CreateJobDialogProps) {
       title: "",
       description: "",
       location: "",
-      tags: "",
       salaryMin: "",
       salaryMax: "",
       isRemote: false,
@@ -69,12 +67,69 @@ export default function CreateJobDialog({ events }: CreateJobDialogProps) {
     },
   });
 
+  // Tag editor state (better UX than comma-separated)
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState("");
+
+  const addTag = () => {
+    const t = tagInput.trim();
+    if (!t) return;
+    if (!tags.includes(t)) setTags((s) => [...s, t]);
+    setTagInput("");
+  };
+  const removeTag = (t: string) => setTags((s) => s.filter((x) => x !== t));
+  const onTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addTag();
+    } else if (e.key === "Escape") {
+      setTagInput("");
+    }
+  };
+
+  // Salary states keep numeric values for submission, display formatted string
+  const [salaryMinRaw, setSalaryMinRaw] = useState<number | undefined>(
+    undefined
+  );
+  const [salaryMaxRaw, setSalaryMaxRaw] = useState<number | undefined>(
+    undefined
+  );
+  const formatRupiah = (value?: number) =>
+    value == null
+      ? ""
+      : new Intl.NumberFormat("id-ID", {
+          style: "currency",
+          currency: "IDR",
+          maximumFractionDigits: 0,
+        }).format(value);
+
+  const onSalaryInputChange = (
+    setter: (v: number | undefined) => void,
+    val: string
+  ) => {
+    // keep only digits
+    const digits = val.replace(/[^\d]/g, "");
+    const num = digits ? parseInt(digits, 10) : undefined;
+    setter(num);
+  };
+
+  // Derived: whether form is valid enough to submit
+  const isCreateDisabled = useMemo(() => {
+    const title = form.getValues("title").trim();
+    const eventId = form.getValues("eventId");
+    const max = salaryMaxRaw;
+    return !title || !eventId || !max;
+  }, [form, salaryMaxRaw]);
+
   const createMutation = trpc.jobs.create.useMutation({
     onSuccess: () => {
       toast.success("Job created successfully!");
       utils.companies.getMyCompanyDashboard.invalidate();
       form.reset();
+      setTags([]);
       setOpen(false);
+      setSalaryMinRaw(undefined);
+      setSalaryMaxRaw(undefined);
     },
     onError: (error) => {
       toast.error(error.message || "Failed to create job");
@@ -86,14 +141,9 @@ export default function CreateJobDialog({ events }: CreateJobDialogProps) {
       title: data.title,
       description: data.description || undefined,
       location: data.location || undefined,
-      tags: data.tags
-        ? data.tags
-            .split(",")
-            .map((tag) => tag.trim())
-            .filter(Boolean)
-        : [],
-      salaryMin: data.salaryMin ? parseInt(data.salaryMin) : undefined,
-      salaryMax: parseInt(data.salaryMax),
+      tags: tags,
+      salaryMin: salaryMinRaw ?? undefined,
+      salaryMax: salaryMaxRaw ?? 0,
       isRemote: data.isRemote,
       eventId: parseInt(data.eventId),
     });
@@ -194,62 +244,108 @@ export default function CreateJobDialog({ events }: CreateJobDialogProps) {
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="tags"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Skills/Tags</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="e.g. React, TypeScript, Node.js (comma-separated)"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Separate multiple tags with commas
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Tag editor */}
+            <FormItem>
+              <FormLabel>Skills / Tags</FormLabel>
+              <div className="flex gap-2 items-center">
+                <Input
+                  placeholder="Type a skill and press Enter or click Add"
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={onTagKeyDown}
+                />
+                <Button
+                  type="button"
+                  onClick={addTag}
+                  disabled={!tagInput.trim()}
+                >
+                  Add
+                </Button>
+              </div>
+              <FormDescription>
+                Press Enter to add tag. Click a tag to remove it.
+              </FormDescription>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {tags.map((t) => (
+                  <div
+                    key={t}
+                    className="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 text-sm"
+                  >
+                    <span>{t}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeTag(t)}
+                      className="inline-flex items-center justify-center p-1 rounded-full hover:bg-slate-200"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </FormItem>
 
             <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="salaryMin"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Minimum Salary</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="e.g. 5000000"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <FormItem>
+                <FormLabel>Minimum Salary (Rp)</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="e.g. 5000000"
+                    value={
+                      salaryMinRaw != null ? formatRupiah(salaryMinRaw) : ""
+                    }
+                    onFocus={(e) => {
+                      // show raw digits on focus
+                      e.currentTarget.value =
+                        salaryMinRaw != null ? String(salaryMinRaw) : "";
+                    }}
+                    onChange={(e) =>
+                      onSalaryInputChange(setSalaryMinRaw, e.target.value)
+                    }
+                    onBlur={(e) => {
+                      // format after blur
+                      const digits = e.currentTarget.value.replace(
+                        /[^\d]/g,
+                        ""
+                      );
+                      setSalaryMinRaw(
+                        digits ? parseInt(digits, 10) : undefined
+                      );
+                    }}
+                  />
+                </FormControl>
+                <FormDescription>
+                  Optional. Leave empty if not applicable.
+                </FormDescription>
+              </FormItem>
 
-              <FormField
-                control={form.control}
-                name="salaryMax"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Maximum Salary *</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="e.g. 10000000"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <FormItem>
+                <FormLabel>Maximum Salary (Rp) *</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="e.g. 10000000"
+                    value={
+                      salaryMaxRaw != null ? formatRupiah(salaryMaxRaw) : ""
+                    }
+                    onFocus={(e) => {
+                      e.currentTarget.value =
+                        salaryMaxRaw != null ? String(salaryMaxRaw) : "";
+                    }}
+                    onChange={(e) =>
+                      onSalaryInputChange(setSalaryMaxRaw, e.target.value)
+                    }
+                    onBlur={(e) => {
+                      const digits = e.currentTarget.value.replace(
+                        /[^\d]/g,
+                        ""
+                      );
+                      setSalaryMaxRaw(
+                        digits ? parseInt(digits, 10) : undefined
+                      );
+                    }}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
             </div>
 
             <FormField
@@ -277,12 +373,17 @@ export default function CreateJobDialog({ events }: CreateJobDialogProps) {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setOpen(false)}
+                onClick={() => {
+                  setOpen(false);
+                }}
                 disabled={createMutation.isPending}
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={createMutation.isPending}>
+              <Button
+                type="submit"
+                disabled={createMutation.isPending || isCreateDisabled}
+              >
                 {createMutation.isPending && (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 )}

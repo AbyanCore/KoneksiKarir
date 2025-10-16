@@ -8,6 +8,8 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Form } from "@/components/ui/form";
+import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 import BasicInformationCard from "./BasicInformationCard";
 import EducationCard from "./EducationCard";
 import SkillsCard from "./SkillsCard";
@@ -45,6 +47,45 @@ export default function ProfilePage() {
 
   const utils = trpc.useUtils();
 
+  // Update mutation
+  const updateMutation = trpc.profile.updateMyProfile.useMutation({
+    onSuccess: () => {
+      toast.success("Profile updated successfully!");
+      isEditingRef.current = false;
+      setIsEditing(false);
+      utils.profile.getMyProfile.invalidate();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to update profile");
+    },
+  });
+
+  // --- NEW: create profile mutation (used when user has no profile yet) ---
+  const createProfileMutation = trpc.profile.createMyProfile.useMutation({
+    onSuccess: (created) => {
+      toast.success("Profile created. You can now edit.");
+      // ensure we refetch the profile data
+      utils.profile.getMyProfile.invalidate();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to create profile");
+    },
+  });
+
+  const form = useForm<ProfileForm>({
+    defaultValues: {
+      email: "",
+      fullName: "",
+      bio: "",
+      lastEducationLevel: "",
+      graduationYear: "",
+      institutionName: "",
+      resumeUrl: "",
+      portfolioUrl: "",
+      NIK: "",
+    },
+  });
+
   // Redirect if not authenticated
   useEffect(() => {
     if (!isAuthLoading && !isAuthenticated) {
@@ -62,33 +103,6 @@ export default function ProfilePage() {
       refetchOnWindowFocus: false,
     }
   );
-
-  // Update mutation
-  const updateMutation = trpc.profile.updateMyProfile.useMutation({
-    onSuccess: () => {
-      toast.success("Profile updated successfully!");
-      isEditingRef.current = false;
-      setIsEditing(false);
-      utils.profile.getMyProfile.invalidate();
-    },
-    onError: (error) => {
-      toast.error(error.message || "Failed to update profile");
-    },
-  });
-
-  const form = useForm<ProfileForm>({
-    defaultValues: {
-      email: "",
-      fullName: "",
-      bio: "",
-      lastEducationLevel: "",
-      graduationYear: "",
-      institutionName: "",
-      resumeUrl: "",
-      portfolioUrl: "",
-      NIK: "",
-    },
-  });
 
   // Update form when profile loads
   useEffect(() => {
@@ -112,6 +126,22 @@ export default function ProfilePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userData]);
 
+  // new: helper to focus first input when entering edit mode
+  useEffect(() => {
+    if (isEditing) {
+      // small delay to ensure DOM updated
+      setTimeout(() => {
+        const fn = document.querySelector<HTMLInputElement>(
+          'input[name="fullName"]'
+        );
+        fn?.focus();
+      }, 50);
+      // smooth scroll to top of form area
+      const formEl = document.querySelector("form");
+      formEl?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [isEditing]);
+
   const onSubmit = (data: ProfileForm) => {
     updateMutation.mutate({
       fullName: data.fullName,
@@ -130,7 +160,9 @@ export default function ProfilePage() {
     });
   };
 
-  const handleEdit = () => {
+  // Handle entering edit mode — now creates profile first if missing
+  const handleEdit = async () => {
+    // if profile exists behave as before
     if (userData?.profile) {
       const profile = userData.profile;
       form.reset({
@@ -149,6 +181,50 @@ export default function ProfilePage() {
       setPhoneNumbers(profile.phoneNumber || []);
       isEditingRef.current = true;
       setIsEditing(true);
+      return;
+    }
+
+    // if no userData or still loading, bail out
+    if (!userData) return;
+
+    // prevent duplicate create calls
+    if (createProfileMutation.isPending) return;
+
+    try {
+      // Attempt to create an empty profile on server (server should accept empty/default)
+      const created = await createProfileMutation.mutateAsync(
+        {} as any // adjust input if your createMyProfile expects fields
+      );
+
+      // Invalidate and wait for fresh profile to be fetched
+      await utils.profile.getMyProfile.invalidate();
+
+      // If server returned created profile object, use it to seed form
+      const createdProfile = (created && (created.profile || created)) || null;
+
+      form.reset({
+        email: userData.email,
+        fullName: createdProfile?.fullName || "",
+        bio: createdProfile?.bio || "",
+        lastEducationLevel: createdProfile?.lastEducationLevel || "",
+        graduationYear: createdProfile?.graduationYear?.toString() || "",
+        institutionName: createdProfile?.institutionName || "",
+        resumeUrl: createdProfile?.resumeUrl || "",
+        portfolioUrl: createdProfile?.portfolioUrl || "",
+        NIK: createdProfile?.NIK || "",
+      });
+
+      // set local arrays
+      setSkills(createdProfile?.skills || []);
+      setSocialLinks(createdProfile?.socialLinks || []);
+      setPhoneNumbers(createdProfile?.phoneNumber || []);
+
+      isEditingRef.current = true;
+      setIsEditing(true);
+    } catch (err) {
+      // mutateAsync errors handled by onError as well, but show fallback
+      console.error("Create profile error:", err);
+      toast.error("Failed to create profile. Please try again.");
     }
   };
 
@@ -220,6 +296,9 @@ export default function ProfilePage() {
     setPhoneNumbers(phoneNumbers.filter((_, i) => i !== index));
   };
 
+  const anyPending =
+    updateMutation.isPending || createProfileMutation.isPending;
+
   if (isAuthLoading || isLoading) {
     return (
       <div className="container mx-auto p-6">
@@ -243,6 +322,7 @@ export default function ProfilePage() {
   return (
     <div className="container mx-auto p-6">
       <div className="max-w-4xl mx-auto space-y-6">
+        {/* Header + quick actions */}
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold">My Profile</h1>
@@ -250,11 +330,64 @@ export default function ProfilePage() {
               Manage your personal information and preferences
             </p>
           </div>
+
+          {/* Top action: Edit or Create */}
+          <div className="flex items-center gap-2">
+            {!userData?.profile ? (
+              <Button
+                variant="secondary"
+                onClick={handleEdit}
+                disabled={createProfileMutation.isPending || isEditing}
+                title="Create profile and start editing"
+              >
+                {createProfileMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  "Create Profile"
+                )}
+              </Button>
+            ) : (
+              <Button
+                variant="secondary"
+                onClick={handleEdit}
+                disabled={anyPending || isEditing}
+              >
+                Edit Profile
+              </Button>
+            )}
+          </div>
         </div>
+
+        {/* If profile missing and not editing, show a helpful banner */}
+        {!userData?.profile && !isEditing && (
+          <Card className="p-4 bg-yellow-50 border-yellow-100">
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-yellow-800">
+                It looks like you don't have a profile yet. Create one to apply
+                for jobs and make your profile visible to recruiters.
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleEdit}
+                disabled={createProfileMutation.isPending}
+              >
+                {createProfileMutation.isPending ? "Creating..." : "Create"}
+              </Button>
+            </div>
+          </Card>
+        )}
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <BasicInformationCard form={form} isEditing={isEditing} />
+            <BasicInformationCard
+              form={form}
+              isEditing={isEditing}
+              // pass a disabled prop based on save pending
+            />
             <EducationCard form={form} isEditing={isEditing} />
             <SkillsCard
               skills={skills}
@@ -281,15 +414,48 @@ export default function ProfilePage() {
               onRemovePhoneNumber={removePhoneNumber}
             />
 
-            <ProfileActions
-              isEditing={isEditing}
-              isSubmitting={updateMutation.isPending}
-              onEdit={handleEdit}
-              onCancel={handleCancel}
-            />
+            {/* Hide existing ProfileActions while editing; we show sticky actions */}
+            {/* {!isEditing && (
+              <ProfileActions
+                isEditing={isEditing}
+                isSubmitting={updateMutation.isPending}
+                onEdit={handleEdit}
+                onCancel={handleCancel}
+              />
+            )} */}
           </form>
         </Form>
       </div>
+
+      {/* Sticky action bar while editing */}
+      {isEditing && (
+        <div className="fixed bottom-4 left-0 right-0 flex justify-center pointer-events-none">
+          <div className="w-full max-w-4xl px-4 pointer-events-auto">
+            <div className="bg-white border rounded-lg shadow-lg p-3 flex justify-end gap-2">
+              <Button
+                variant="ghost"
+                onClick={handleCancel}
+                disabled={anyPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => form.handleSubmit(onSubmit)()}
+                disabled={updateMutation.isPending}
+              >
+                {updateMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save changes"
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

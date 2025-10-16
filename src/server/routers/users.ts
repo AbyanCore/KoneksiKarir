@@ -1,5 +1,5 @@
 import prisma from "@/lib/prisma";
-import { publicProcedure, router } from "../trpc";
+import { publicProcedure, router, protectedProcedure } from "../trpc";
 import z from "zod";
 import bcrypt from "bcrypt";
 import { CreateJobSeekerAccountDto } from "@/lib/dtos/users/create.jobseeker-account.dto";
@@ -166,4 +166,32 @@ export const usersRouter = router({
       });
       return updatedUser;
     }),
+  // New: Get authenticated user's applications with history
+  getMyApplications: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.user.userId;
+
+    const applications = await prisma.application.findMany({
+      where: { jobSeekerId: userId },
+      orderBy: { createdAt: "desc" },
+      include: {
+        job: {
+          select: {
+            id: true,
+            title: true,
+            company: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+        ApplicationHistory: {
+          orderBy: { changedAt: "desc" },
+        },
+      },
+    });
+
+    return applications;
+  }),
 });

@@ -1,0 +1,7 @@
+.next
+data
+.vscode
+docs
+node_modules
+.env.*
+.env

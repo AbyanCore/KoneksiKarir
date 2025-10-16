@@ -20,6 +20,7 @@ import {
   LayoutDashboard,
 } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
+import Link from "next/link";
 
 export default function NavBar() {
   const router = useRouter();
@@ -115,6 +116,16 @@ export default function NavBar() {
                   </p>
                 </div>
               </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem>
+                <Link
+                  className="cursor-pointer flex items-center"
+                  href="/s/hub"
+                >
+                  <LayoutDashboard className="mr-2 h-4 w-4" />
+                  <span>Back to Hub</span>
+                </Link>
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               {navigationItems.map((item, index) => {
                 const Icon = item.icon;

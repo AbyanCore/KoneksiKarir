@@ -232,4 +232,76 @@ export const profileRouter = router({
         hasProfile: !!user.JobSeekerProfile,
       };
     }),
+
+  // Create profile for authenticated user (used when account exists but profile doesn't)
+  createMyProfile: jobSeekerProcedure.mutation(async ({ ctx }) => {
+    const userId = ctx.user.userId;
+
+    // If profile already exists, return it
+    const existing = await prisma.jobSeekerProfile.findUnique({
+      where: { userId },
+    });
+
+    if (existing) {
+      return {
+        success: true,
+        profile: {
+          id: existing.id,
+          fullName: existing.fullName,
+          bio: existing.bio,
+          lastEducationLevel: existing.lastEducationLevel,
+          graduationYear: existing.graduationYear,
+          institutionName: existing.institutionName,
+          skills: existing.skills,
+          socialLinks: existing.socialLinks as Array<{
+            type: string;
+            url: string;
+          }>,
+          resumeUrl: existing.resumeUrl,
+          portfolioUrl: existing.portfolioUrl,
+          NIK: existing.NIK,
+          phoneNumber: existing.phoneNumber,
+        },
+      };
+    }
+
+    // Create a minimal profile (fullName required in schema, use empty string as placeholder)
+    const created = await prisma.jobSeekerProfile.create({
+      data: {
+        userId,
+        fullName: "",
+        bio: null,
+        lastEducationLevel: null,
+        graduationYear: null,
+        institutionName: null,
+        skills: [],
+        socialLinks: [],
+        resumeUrl: null,
+        portfolioUrl: null,
+        NIK: null,
+        phoneNumber: [],
+      },
+    });
+
+    return {
+      success: true,
+      profile: {
+        id: created.id,
+        fullName: created.fullName,
+        bio: created.bio,
+        lastEducationLevel: created.lastEducationLevel,
+        graduationYear: created.graduationYear,
+        institutionName: created.institutionName,
+        skills: created.skills,
+        socialLinks: created.socialLinks as Array<{
+          type: string;
+          url: string;
+        }>,
+        resumeUrl: created.resumeUrl,
+        portfolioUrl: created.portfolioUrl,
+        NIK: created.NIK,
+        phoneNumber: created.phoneNumber,
+      },
+    };
+  }),
 });

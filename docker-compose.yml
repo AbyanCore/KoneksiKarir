@@ -10,7 +10,18 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "5432:54 32"
+  app:
+    build: .
+    volumes:
+      - ./data:/app/data
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgres://admin:letmein@db:5432/db-koneksikarir
+      - JWT_SECRET=7ce5b8b2ad12baaa1c48ddfdbb2b593ac9fff31cc342f992908cd118d0db3175
+    depends_on:
+      - db
 
 volumes:
   db_data:
