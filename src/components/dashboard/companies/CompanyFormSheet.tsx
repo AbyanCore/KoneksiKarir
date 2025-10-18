@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import FileUpload, { FileUploadResponse } from "@/components/ui/file-upload";
 
 interface CompanyFormData {
   name: string;
@@ -161,15 +162,21 @@ export default function CompanyFormSheet({
 
           <div className="grid gap-2">
             <Label htmlFor="logoUrl" className="text-sm">
-              Logo URL
+              Company Logo
             </Label>
-            <Input
-              id="logoUrl"
-              placeholder="/logos/company.png"
-              value={formData.logoUrl}
-              onChange={(e) =>
-                onFormDataChange({ ...formData, logoUrl: e.target.value })
-              }
+            <FileUpload
+              accept="image/png,image/jpeg,image/jpg,image/webp"
+              maxSize={2}
+              label="Upload Logo"
+              description="PNG, JPG, WEBP up to 2MB"
+              currentFileUrl={formData.logoUrl || undefined}
+              showPreview={true}
+              onUploadSuccess={(data: FileUploadResponse) => {
+                onFormDataChange({ ...formData, logoUrl: data.url });
+              }}
+              onUploadError={(error) => {
+                console.error("Logo upload error:", error);
+              }}
             />
           </div>
         </div>

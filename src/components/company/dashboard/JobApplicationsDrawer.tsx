@@ -139,9 +139,6 @@ export default function JobApplicationsDrawer({
                 const profile = application.jobSeeker.JobSeekerProfile;
                 const resumeUrl = profile?.resumeUrl;
                 const portfolioUrl = profile?.portfolioUrl;
-                const profileUrl =
-                  profile?.publicProfileUrl ||
-                  `/s/company/talent/${application.jobSeeker.id}`;
                 const phoneEntries = Array.isArray(profile?.phoneNumber)
                   ? profile.phoneNumber.filter((phone: string) => phone?.trim())
                   : profile?.phoneNumber
@@ -243,7 +240,7 @@ export default function JobApplicationsDrawer({
                         </>
                       )}
 
-                      {(resumeUrl || portfolioUrl || profileUrl) && (
+                      {(resumeUrl || portfolioUrl) && (
                         <>
                           <Separator />
                           <div className="flex flex-wrap gap-2">
@@ -269,22 +266,6 @@ export default function JobApplicationsDrawer({
                                   <FileText className="h-4 w-4 mr-2" />
                                   View Portfolio
                                 </a>
-                              </Button>
-                            )}
-                            {profileUrl && (
-                              <Button
-                                size="sm"
-                                variant="secondary"
-                                onClick={() =>
-                                  window.open(
-                                    profileUrl,
-                                    "_blank",
-                                    "noreferrer"
-                                  )
-                                }
-                              >
-                                <ExternalLink className="h-4 w-4 mr-2" />
-                                View Full Profile
                               </Button>
                             )}
                           </div>

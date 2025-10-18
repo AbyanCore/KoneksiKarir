@@ -242,56 +242,58 @@ export default function EventsManagement() {
   }
 
   return (
-    <div className="container mx-auto p-6 max-w-7xl">
-      <EventsHeader onCreateClick={openCreateSheet} />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 p-4">
+      <div className="max-w-7xl mx-auto space-y-4">
+        <EventsHeader onCreateClick={openCreateSheet} />
 
-      <StatsCards
-        totalEvents={stats.totalEvents}
-        totalJobs={stats.totalJobs}
-        totalApplications={stats.totalApplications}
-      />
+        <StatsCards
+          totalEvents={stats.totalEvents}
+          totalJobs={stats.totalJobs}
+          totalApplications={stats.totalApplications}
+        />
 
-      <SearchBar searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+        <SearchBar searchQuery={searchQuery} onSearchChange={setSearchQuery} />
 
-      <EventsGrid
-        events={filteredEvents}
-        onView={openDetailSheet}
-        onEdit={openEditSheet}
-        onDelete={openDeleteSheet}
-      />
+        <EventsGrid
+          events={filteredEvents}
+          onView={openDetailSheet}
+          onEdit={openEditSheet}
+          onDelete={openDeleteSheet}
+        />
 
-      {/* Form Sheet */}
-      <EventFormSheet
-        open={formSheetOpen}
-        onOpenChange={setFormSheetOpen}
-        formData={formData}
-        onFormDataChange={setFormData}
-        onSubmit={handleFormSubmit}
-        isLoading={
-          createEventMutation.isPending || updateEventMutation.isPending
-        }
-        mode={formMode}
-      />
+        {/* Form Sheet */}
+        <EventFormSheet
+          open={formSheetOpen}
+          onOpenChange={setFormSheetOpen}
+          formData={formData}
+          onFormDataChange={setFormData}
+          onSubmit={handleFormSubmit}
+          isLoading={
+            createEventMutation.isPending || updateEventMutation.isPending
+          }
+          mode={formMode}
+        />
 
-      {/* Delete Confirmation Sheet */}
-      <DeleteConfirmSheet
-        open={deleteSheetOpen}
-        onOpenChange={setDeleteSheetOpen}
-        event={
-          selectedEventId
-            ? events.find((e) => e.id === selectedEventId) || null
-            : null
-        }
-        onConfirm={handleDelete}
-        isLoading={deleteEventMutation.isPending}
-      />
+        {/* Delete Confirmation Sheet */}
+        <DeleteConfirmSheet
+          open={deleteSheetOpen}
+          onOpenChange={setDeleteSheetOpen}
+          event={
+            selectedEventId
+              ? events.find((e) => e.id === selectedEventId) || null
+              : null
+          }
+          onConfirm={handleDelete}
+          isLoading={deleteEventMutation.isPending}
+        />
 
-      {/* Detail Sheet */}
-      <EventDetailSheet
-        open={detailSheetOpen}
-        onOpenChange={setDetailSheetOpen}
-        event={detailEvent}
-      />
+        {/* Detail Sheet */}
+        <EventDetailSheet
+          open={detailSheetOpen}
+          onOpenChange={setDetailSheetOpen}
+          event={detailEvent}
+        />
+      </div>
     </div>
   );
 }

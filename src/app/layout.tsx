@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "KoneksiKarir",
+  title: "KoneksiKarir [ISO JOS]",
   description:
     "KoneksiKarir is a platform that helps people discover and connect with career opportunities.",
   keywords: [
@@ -34,6 +34,7 @@ export const metadata: Metadata = {
     "Career Development",
     "Professional Networking",
     "Find Jobs Online",
+    "ISO JOS",
   ],
 };
 
