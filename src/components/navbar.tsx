@@ -17,6 +17,7 @@ import {
   LogOut,
   Building2,
   LayoutDashboard,
+  BookOpenText,
 } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
 import LogoApp from "@/components/LogoApp";
@@ -107,14 +108,33 @@ export default function NavBar() {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <Link
-                  className="cursor-pointer flex items-center"
-                  href="/s/hub"
-                >
-                  <LayoutDashboard className="mr-2 h-4 w-4" />
-                  <span>Back to Hub</span>
-                </Link>
+              <DropdownMenuItem
+                className="cursor-pointer"
+                onClick={() => router.push("/s/hub")}
+              >
+                <LayoutDashboard className="mr-2 h-4 w-4" />
+                <span>Hub</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="cursor-pointer"
+                onClick={() => {
+                  if (user.role === "ADMIN_COMPANY") {
+                    router.push(
+                      "https://docs.google.com/document/d/13gpcZAlmEEGryFTKyTc6uXRPD4nuPJdwNOTV5nDb7iY/edit?tab=t.0"
+                    );
+                  } else if (user.role === "JOB_SEEKER") {
+                    router.push(
+                      "https://docs.google.com/document/d/13gpcZAlmEEGryFTKyTc6uXRPD4nuPJdwNOTV5nDb7iY/edit?tab=t.j9d3i0rtnq6a"
+                    );
+                  } else {
+                    router.push(
+                      "https://docs.google.com/document/d/1clWVpNVc-myrk9PVS0actgCnIyCz8ROEq3Z-TobLeD4/edit?tab=t.0"
+                    );
+                  }
+                }}
+              >
+                <BookOpenText className="mr-2 h-4 w-4" />
+                <span>Guide</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               {navigationItems.map((item, index) => {
