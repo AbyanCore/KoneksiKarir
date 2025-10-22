@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
 import { trpc } from "@/components/trpc/trpc-client";
 import DashboardHeader from "./DashboardHeader";
@@ -12,6 +13,7 @@ import EducationChart from "./EducationChart";
 import JobTrendChart from "./JobTrendChart";
 
 export default function DashboardOverview() {
+  const router = useRouter();
   const [viewMode, setViewMode] = useState<"event" | "lifetime">("event");
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -103,7 +105,10 @@ export default function DashboardOverview() {
 
   // Handle download report
   const handleDownloadReport = () => {
-    console.log("Download report clicked - not implemented yet");
+    const reportUrl = selectedEventId
+      ? `/s/admin/report?eventId=${selectedEventId}`
+      : `/s/admin/report`;
+    router.push(reportUrl);
   };
 
   if (overviewLoading) {
