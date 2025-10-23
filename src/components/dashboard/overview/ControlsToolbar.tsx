@@ -79,13 +79,11 @@ export default function ControlsToolbar({
             onClick={onDownloadReport}
           >
             <DownloadCloud className="mr-2 h-4 w-4" />
-            Download Full Report
+            Export Data
           </Button>
         </TooltipTrigger>
         <TooltipContent side="top">
-          <span className="text-sm">
-            Download a full CSV/PDF report (coming soon)
-          </span>
+          <span className="text-sm">Download a full CSV/PDF report</span>
         </TooltipContent>
       </Tooltip>
     </div>

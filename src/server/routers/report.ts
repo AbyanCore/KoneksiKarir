@@ -295,4 +295,240 @@ export const reportRouter = router({
         },
       };
     }),
+
+  // Export jobseeker data to CSV
+  exportJobseekerData: adminProcedure
+    .input(
+      z.object({
+        eventId: z.number().optional(),
+      })
+    )
+    .query(async (opts) => {
+      const { eventId } = opts.input;
+
+      // Fetch all jobseeker applications with their profiles
+      const applications = await prisma.application.findMany({
+        where: eventId
+          ? {
+              job: {
+                eventId,
+              },
+            }
+          : {},
+        include: {
+          jobSeeker: {
+            select: {
+              id: true,
+              email: true,
+              JobSeekerProfile: {
+                select: {
+                  fullName: true,
+                  phoneNumber: true,
+                  lastEducationLevel: true,
+                  bio: true,
+                  resumeUrl: true,
+                  skills: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+
+      // Transform data for CSV export - User and JobSeekerProfile only
+      const csvData = applications.map((app) => ({
+        userId: app.jobSeeker.id,
+        email: app.jobSeeker.email,
+        fullName: app.jobSeeker.JobSeekerProfile?.fullName || null,
+        phoneNumber: app.jobSeeker.JobSeekerProfile?.phoneNumber
+          ? Array.isArray(app.jobSeeker.JobSeekerProfile.phoneNumber)
+            ? app.jobSeeker.JobSeekerProfile.phoneNumber.join("; ")
+            : app.jobSeeker.JobSeekerProfile.phoneNumber
+          : null,
+        lastEducationLevel:
+          app.jobSeeker.JobSeekerProfile?.lastEducationLevel || null,
+        bio: app.jobSeeker.JobSeekerProfile?.bio || null,
+        resumeUrl: app.jobSeeker.JobSeekerProfile?.resumeUrl || null,
+        skills: app.jobSeeker.JobSeekerProfile?.skills
+          ? Array.isArray(app.jobSeeker.JobSeekerProfile.skills)
+            ? app.jobSeeker.JobSeekerProfile.skills.join("; ")
+            : app.jobSeeker.JobSeekerProfile.skills
+          : null,
+      }));
+
+      return csvData;
+    }),
+
+  // Export jobseekers by company
+  exportJobseekersByCompany: adminProcedure
+    .input(
+      z.object({
+        companyId: z.number(),
+        eventId: z.number().optional(),
+      })
+    )
+    .query(async (opts) => {
+      const { companyId, eventId } = opts.input;
+
+      // Fetch jobseekers who applied to jobs from this company
+      const applications = await prisma.application.findMany({
+        where: {
+          job: {
+            companyId,
+            ...(eventId ? { eventId } : {}),
+          },
+        },
+        include: {
+          jobSeeker: {
+            select: {
+              id: true,
+              email: true,
+              JobSeekerProfile: {
+                select: {
+                  fullName: true,
+                  phoneNumber: true,
+                  lastEducationLevel: true,
+                  bio: true,
+                  resumeUrl: true,
+                  skills: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+
+      // Transform data for CSV export - User and JobSeekerProfile only
+      const csvData = applications.map((app) => ({
+        userId: app.jobSeeker.id,
+        email: app.jobSeeker.email,
+        fullName: app.jobSeeker.JobSeekerProfile?.fullName || null,
+        phoneNumber: app.jobSeeker.JobSeekerProfile?.phoneNumber
+          ? Array.isArray(app.jobSeeker.JobSeekerProfile.phoneNumber)
+            ? app.jobSeeker.JobSeekerProfile.phoneNumber.join("; ")
+            : app.jobSeeker.JobSeekerProfile.phoneNumber
+          : null,
+        lastEducationLevel:
+          app.jobSeeker.JobSeekerProfile?.lastEducationLevel || null,
+        bio: app.jobSeeker.JobSeekerProfile?.bio || null,
+        resumeUrl: app.jobSeeker.JobSeekerProfile?.resumeUrl || null,
+        skills: app.jobSeeker.JobSeekerProfile?.skills
+          ? Array.isArray(app.jobSeeker.JobSeekerProfile.skills)
+            ? app.jobSeeker.JobSeekerProfile.skills.join("; ")
+            : app.jobSeeker.JobSeekerProfile.skills
+          : null,
+      }));
+
+      return csvData;
+    }),
+
+  // Get companies list for picker
+  getCompaniesForPicker: adminProcedure.query(async () => {
+    const companies = await prisma.company.findMany({
+      select: {
+        id: true,
+        name: true,
+        code: true,
+      },
+      orderBy: {
+        name: "asc",
+      },
+    });
+
+    return companies;
+  }),
+
+  // Export all registered users without profiles
+  exportAllUsers: adminProcedure
+    .input(
+      z.object({
+        eventId: z.number().optional(),
+      })
+    )
+    .query(async (opts) => {
+      const { eventId } = opts.input;
+
+      // Fetch all users excluding ADMIN, filter by role
+      const users = await prisma.user.findMany({
+        where: {
+          role: {
+            in: ["JOB_SEEKER", "ADMIN_COMPANY"],
+          },
+        },
+        select: {
+          id: true,
+          email: true,
+          role: true,
+          is_blocked: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+
+      // Transform data for CSV export - User data only (no password, no admin)
+      const csvData = users.map((user) => ({
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+        isBlocked: user.is_blocked ? "Ya" : "Tidak",
+        createdAt: user.createdAt.toISOString(),
+        updatedAt: user.updatedAt.toISOString(),
+      }));
+
+      return csvData;
+    }),
+
+  // Export all registered companies with their joined events
+  exportCompanies: adminProcedure.query(async () => {
+    // Fetch all companies with their event participations
+    const companies = await prisma.company.findMany({
+      include: {
+        EventCompanyParticipation: {
+          include: {
+            event: {
+              select: {
+                id: true,
+                title: true,
+                date: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        name: "asc",
+      },
+    });
+
+    // Transform data for CSV export - Include events as array
+    const csvData = companies.map((company) => ({
+      companyId: company.id,
+      companyName: company.name,
+      companyCode: company.code,
+      website: company.website || null,
+      location: company.location || null,
+      description: company.description || null,
+      logoUrl: company.logoUrl || null,
+      eventsJoined: company.EventCompanyParticipation.map((participation) => ({
+        eventId: participation.event.id,
+        eventTitle: participation.event.title,
+        eventDate: participation.event.date.toISOString(),
+        standNumber: participation.standNumber,
+      })),
+      totalEventsJoined: company.EventCompanyParticipation.length,
+      createdAt: company.createdAt.toISOString(),
+      updatedAt: company.updatedAt.toISOString(),
+    }));
+
+    return csvData;
+  }),
 });
